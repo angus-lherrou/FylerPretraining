@@ -26,26 +26,26 @@ random.seed(2020)
 
 class BagOfEmbeddings(nn.Module):
 
-  def __init__(self, num_class=3000):
+  def __init__(self, out_dim):
     """Constructor"""
 
     super(BagOfEmbeddings, self).__init__()
 
     self.embed = nn.Embedding(
       num_embeddings=max_cuis,
-      embedding_dim=cfg.getint('model', 'emb_dim'))
+      embedding_dim=cfg.getint('model', 'embed'))
 
     self.hidden = nn.Linear(
-      in_features=cfg.getint('model', 'emb_dim'),
-      out_features=cfg.getint('model', 'hidden_size'))
+      in_features=cfg.getint('model', 'embed'),
+      out_features=cfg.getint('model', 'hidden'))
 
     self.relu = nn.ReLU()
 
     self.dropout = nn.Dropout(cfg.getfloat('model', 'dropout'))
 
     self.classifier = nn.Linear(
-      in_features=cfg.getint('model', 'hidden_size'),
-      out_features=num_class)
+      in_features=cfg.getint('model', 'hidden'),
+      out_features=out_dim)
 
   def forward(self, texts):
     """Forward pass"""
@@ -183,35 +183,36 @@ def main():
     os.path.join(base, cfg.get('data', 'codes')),
     cfg.get('args', 'max_cuis'),
     cfg.get('args', 'max_codes'))
-  inputs, outputs = dp.load()
+  in_seqs, out_seqs = dp.load()
 
-  tr_texts, val_texts, tr_labels, val_labels = train_test_split(
-    inputs, outputs, test_size=0.20, random_state=2020)
+  tr_in_seqs, val_in_seqs, tr_out_seqs, val_out_seqs = train_test_split(
+    in_seqs, out_seqs, test_size=0.20, random_state=2020)
 
   train_loader = make_data_loader(
-    tr_texts,
-    tr_labels,
-    cfg.getint('model', 'batch_size'),
-    cfg.getint('data', 'max_len'),
+    tr_in_seqs,
+    tr_out_seqs,
+    cfg.getint('model', 'batch'),
+    cfg.getint('args', 'max_cuis'), # REALLY?
     'train')
 
   val_loader = make_data_loader(
-    val_texts,
-    val_labels,
-    cfg.getint('model', 'batch_size'),
-    cfg.getint('data', 'max_len'),
+    val_in_seqs,
+    val_out_seqs,
+    cfg.getint('model', 'batch'),
+    cfg.getint('args', 'max_cuis'),
     'dev')
 
   print('loaded %d training and %d validation samples' % \
-        (len(tr_texts), len(val_texts)))
+        (len(tr_in_seqs), len(val_in_seqs)))
 
-  model = BagOfEmbeddings()
+  out_dim = max(len(seq) for seq in tr_out_seqs)
+  model = BagOfEmbeddings(out_dim)
 
   best_roc, optimal_epochs = fit(
     model,
     train_loader,
     val_loader,
-    cfg.getint('model', 'num_epochs'))
+    cfg.getint('model', 'epochs'))
   print('roc auc %.3f after %d epochs' % (best_roc, optimal_epochs))
 
 if __name__ == "__main__":
