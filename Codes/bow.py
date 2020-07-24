@@ -26,13 +26,13 @@ random.seed(2020)
 
 class BagOfEmbeddings(nn.Module):
 
-  def __init__(self, out_dim):
+  def __init__(self, input_vocab_size, output_vocab_size):
     """Constructor"""
 
     super(BagOfEmbeddings, self).__init__()
 
     self.embed = nn.Embedding(
-      num_embeddings=max_cuis,
+      num_embeddings=input_vocab_size,
       embedding_dim=cfg.getint('model', 'embed'))
 
     self.hidden = nn.Linear(
@@ -45,7 +45,7 @@ class BagOfEmbeddings(nn.Module):
 
     self.classifier = nn.Linear(
       in_features=cfg.getint('model', 'hidden'),
-      out_features=out_dim)
+      out_features=output_vocab_size)
 
   def forward(self, texts):
     """Forward pass"""
@@ -59,11 +59,10 @@ class BagOfEmbeddings(nn.Module):
 
     return output
 
-def make_data_loader(input_seqs, output_seqs, batch_size, max_len, partition):
+def make_data_loader(input_seqs, model_outputs, batch_size, partition):
   """DataLoader objects for train or dev/test sets"""
 
-  model_inputs = utils.pad_sequences(input_seqs, max_len)
-  model_outputs = utils.pad_sequences(output_seqs, max_len=None)
+  model_inputs = utils.pad_sequences(input_seqs, max_len=None)
 
   # e.g. transformers take input ids and attn masks
   if type(model_inputs) is tuple:
@@ -101,7 +100,7 @@ def fit(model, train_loader, val_loader, n_epochs):
     num_warmup_steps=100,
     num_training_steps=1000)
 
-  best_roc_auc = -1
+  best_metric = -1
   optimal_epochs = -1
 
   for epoch in range(1, n_epochs + 1):
@@ -128,15 +127,15 @@ def fit(model, train_loader, val_loader, n_epochs):
       num_train_steps += 1
 
     av_loss = train_loss / num_train_steps
-    val_loss, roc_auc = evaluate(model, val_loader)
+    val_loss, metric = evaluate(model, val_loader)
     print('ep: %d, steps: %d, tr loss: %.3f, val loss: %.3f, val roc: %.3f' % \
-          (epoch, num_train_steps, av_loss, val_loss, roc_auc))
+          (epoch, num_train_steps, av_loss, val_loss, metric))
 
-    if roc_auc > best_roc_auc:
-      best_roc_auc = roc_auc
+    if metric > best_metric:
+      best_metric = metric
       optimal_epochs = epoch
 
-  return best_roc_auc, optimal_epochs
+  return best_metric, optimal_epochs
 
 def evaluate(model, data_loader):
   """Evaluation routine"""
@@ -144,13 +143,13 @@ def evaluate(model, data_loader):
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   model.to(device)
 
-  criterion = torch.nn.CrossEntropyLoss()
+  criterion = nn.BCEWithLogitsLoss()
   total_loss, num_steps = 0, 0
 
   model.eval()
 
   all_labels = []
-  all_probs = []
+  all_predictions = []
 
   for batch in data_loader:
     batch = tuple(t.to(device) for t in batch)
@@ -162,16 +161,17 @@ def evaluate(model, data_loader):
 
     batch_logits = logits.detach().to('cpu')
     batch_labels = batch_labels.to('cpu')
-    batch_probs = torch.nn.functional.softmax(batch_logits, dim=1)[:, 1]
+    # batch_preds = np.argmax(batch_logits, axis=1)
+    batch_predictions = torch.argmax(batch_logits, dim=1)
 
     all_labels.extend(batch_labels.tolist())
-    all_probs.extend(batch_probs.tolist())
+    all_predictions.extend(batch_predictions.tolist())
 
     total_loss += loss.item()
     num_steps += 1
 
   av_loss = total_loss / num_steps
-  f1 = f1_score(all_labels, all_probs, average='micro')
+  f1 = f1_score(all_labels, all_predictions, average='micro')
 
   return av_loss, f1
  
@@ -181,47 +181,49 @@ def main():
   dp = data.DatasetProvider(
     os.path.join(base, cfg.get('data', 'cuis')),
     os.path.join(base, cfg.get('data', 'codes')),
-    cfg.get('args', 'max_cuis'),
-    cfg.get('args', 'max_codes'))
+    cfg.get('args', 'cui_vocab_size'),
+    cfg.get('args', 'code_vocab_size'))
   in_seqs, out_seqs = dp.load()
 
   tr_in_seqs, val_in_seqs, tr_out_seqs, val_out_seqs = train_test_split(
-    in_seqs, out_seqs, test_size=0.20, random_state=2020)
-
-  train_loader = make_data_loader(
-    tr_in_seqs,
-    tr_out_seqs,
-    cfg.getint('model', 'batch'),
-    cfg.getint('args', 'max_cuis'), # REALLY?
-    'train')
-
-  val_loader = make_data_loader(
-    val_in_seqs,
-    val_out_seqs,
-    cfg.getint('model', 'batch'),
-    cfg.getint('args', 'max_cuis'),
-    'dev')
+    in_seqs, out_seqs, test_size=0.15, random_state=2020)
 
   print('loaded %d training and %d validation samples' % \
         (len(tr_in_seqs), len(val_in_seqs)))
 
-  out_dim = max(len(seq) for seq in tr_out_seqs)
-  model = BagOfEmbeddings(out_dim)
+  max_cui_seq_len = max(len(seq) for seq in tr_in_seqs)
+  print('longest cui sequence:', max_cui_seq_len)
 
-  best_roc, optimal_epochs = fit(
+  max_code_seq_len = max(len(seq) for seq in tr_out_seqs)
+  print('longest code sequence:', max_code_seq_len)
+
+  train_loader = make_data_loader(
+    tr_in_seqs,
+    utils.sequences_to_matrix(tr_out_seqs, len(dp.output_tokenizer.stoi)),
+    cfg.getint('model', 'batch'),
+    'train')
+
+  val_loader = make_data_loader(
+    val_in_seqs,
+    utils.sequences_to_matrix(val_out_seqs, len(dp.output_tokenizer.stoi)),
+    cfg.getint('model', 'batch'),
+    'dev')
+
+  model = BagOfEmbeddings(
+    input_vocab_size=len(dp.input_tokenizer.stoi),
+    output_vocab_size=len(dp.output_tokenizer.stoi))
+
+  best_f1, optimal_epochs = fit(
     model,
     train_loader,
     val_loader,
     cfg.getint('model', 'epochs'))
-  print('roc auc %.3f after %d epochs' % (best_roc, optimal_epochs))
+  print('roc auc %.3f after %d epochs' % (best_f1, optimal_epochs))
 
 if __name__ == "__main__":
 
   cfg = configparser.ConfigParser()
   cfg.read(sys.argv[1])
   base = os.environ['DATA_ROOT']
-
-  max_cuis = cfg.get('args', 'max_cuis')
-  max_cuis = None if max_cuis == 'all' else int(max_cuis)
 
   main()

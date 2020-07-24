@@ -18,8 +18,18 @@ def pad_sequences(seqs, max_len=None):
 
   return padded
 
+def sequences_to_matrix(seqs, n_columns):
+  """Convert sequences of indices to multi-hot representations"""
+
+  multi_hot = torch.zeros(len(seqs), n_columns)
+
+  for i, seq in enumerate(seqs):
+    multi_hot[i, seq] = 1
+
+  return multi_hot
+
 if __name__ == "__main__":
 
-  seqs = [[1, 2, 3, 4], [5, 6], [7]]
-  output = pad_sequences(seqs, max_len=3)
+  seqs = [[1, 2, 3, 4], [5, 7], [6]]
+  output = sequences_to_matrix(seqs, 8)
   print(output)

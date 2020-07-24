@@ -5,7 +5,6 @@ import tokenizer
 
 model_dir = 'Model/'
 
-alphabet_file = 'Model/alphabet.txt'
 alphabet_pickle = 'Model/alphabet.p'
 
 diag_icd_file = 'DIAGNOSES_ICD.csv'
@@ -18,8 +17,8 @@ class DatasetProvider:
   def __init__(self,
                input_dir,
                output_dir,
-               max_cuis,
-               max_codes):
+               cui_vocab_size,
+               code_vocab_size):
     """Construct it"""
 
     self.input_dir = input_dir
@@ -42,14 +41,14 @@ class DatasetProvider:
 
     # index inputs (cuis)
     self.input_tokenizer = tokenizer.Tokenizer(
-      n_words=None if max_cuis == 'all' else int(max_cuis),
+      n_words=None if cui_vocab_size == 'all' else int(cui_vocab_size),
       lower=False,
       oov_token='oovtok')
     self.tokenize_input()
 
     # index outputs (codes)
     self.output_tokenizer = tokenizer.Tokenizer(
-      n_words=None if max_codes == 'all' else int(max_codes),
+      n_words=None if code_vocab_size == 'all' else int(code_vocab_size),
       lower=False,
       oov_token='oovtok')
     self.tokenize_output()
