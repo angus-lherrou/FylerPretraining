@@ -24,7 +24,7 @@ def sequences_to_matrix(seqs, n_columns):
   multi_hot = torch.zeros(len(seqs), n_columns)
 
   for i, seq in enumerate(seqs):
-    multi_hot[i, seq] = 1
+    multi_hot[i, seq] = 1.0
 
   return multi_hot
 

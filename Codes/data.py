@@ -75,8 +75,8 @@ class DatasetProvider:
     x = [] # input documents
     for file_path in pathlib.Path(self.input_dir).glob('*.txt'):
       x.append(file_path.read_text())
-
     self.input_tokenizer.fit_on_texts(x)
+
     pickle_file = open('Model/tokenizer.p', 'wb')
     pickle.dump(self.input_tokenizer, pickle_file)
     print('input vocab:', len(self.input_tokenizer.stoi))
@@ -87,8 +87,8 @@ class DatasetProvider:
     y = [] # prediction targets
     for _, codes in self.enc2codes.items():
       y.append(' '.join(codes))
-
     self.output_tokenizer.fit_on_texts(y)
+
     print('output vocab:', len(self.output_tokenizer.stoi))
 
   def load(self):
@@ -124,8 +124,8 @@ if __name__ == "__main__":
   dp = DatasetProvider(
     os.path.join(base, cfg.get('data', 'cuis')),
     os.path.join(base, cfg.get('data', 'codes')),
-    cfg.get('args', 'max_cuis'),
-    cfg.get('args', 'max_codes'))
+    cfg.get('args', 'cui_vocab_size'),
+    cfg.get('args', 'code_vocab_size'))
 
   inputs, outputs = dp.load()
   print(inputs[:2])
