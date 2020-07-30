@@ -22,25 +22,31 @@ random.seed(2020)
 
 class BagOfEmbeddings(nn.Module):
 
-  def __init__(self, input_vocab_size, output_vocab_size):
+  def __init__(
+    self,
+    input_vocab_size,
+    output_vocab_size,
+    embed_dim,
+    hidden_units,
+    dropout_rate):
     """Constructor"""
 
     super(BagOfEmbeddings, self).__init__()
 
     self.embed = nn.Embedding(
       num_embeddings=input_vocab_size,
-      embedding_dim=cfg.getint('model', 'embed'))
+      embedding_dim=embed_dim)
 
     self.hidden = nn.Linear(
-      in_features=cfg.getint('model', 'embed'),
-      out_features=cfg.getint('model', 'hidden'))
+      in_features=embed_dim,
+      out_features=hidden_units)
 
     self.relu = nn.ReLU()
 
-    self.dropout = nn.Dropout(cfg.getfloat('model', 'dropout'))
+    self.dropout = nn.Dropout(dropout_rate)
 
     self.classifier = nn.Linear(
-      in_features=cfg.getint('model', 'hidden'),
+      in_features=hidden_units,
       out_features=output_vocab_size)
 
   def forward(self, texts):
@@ -162,7 +168,7 @@ def evaluate(model, data_loader):
   return av_loss
  
 def main():
-  """Fine-tune bert"""
+  """My main main"""
 
   dp = data.DatasetProvider(
     os.path.join(base, cfg.get('data', 'cuis')),
@@ -197,7 +203,10 @@ def main():
 
   model = BagOfEmbeddings(
     input_vocab_size=len(dp.input_tokenizer.stoi),
-    output_vocab_size=len(dp.output_tokenizer.stoi))
+    output_vocab_size=len(dp.output_tokenizer.stoi),
+    embed_dim=cfg.getint('model', 'embed'),
+    hidden_units=cfg.getint('model', 'hidden'),
+    dropout_rate=cfg.getfloat('model', 'dropout'))
 
   best_loss, optimal_epochs = fit(
     model,
