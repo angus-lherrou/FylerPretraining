@@ -2,8 +2,6 @@
 
 import sys
 
-from sklearn.metrics import f1_score
-
 import torch
 import torch.nn as nn
 
@@ -130,6 +128,8 @@ def fit(model, train_loader, val_loader, n_epochs):
           (epoch, num_train_steps, av_tr_loss, val_loss))
 
     if val_loss < best_loss:
+      print('loss improved, saving model...')
+      torch.save(model.state_dict(), 'Model/model.pt')
       best_loss = val_loss
       optimal_epochs = epoch
 
