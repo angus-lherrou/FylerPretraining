@@ -2,12 +2,6 @@
 
 import torch, configparser, os, sys, bow
 
-activation = {}
-def get_activation(name):
-    def hook(model, input, output):
-        activation[name] = output.detach()
-    return hook
-
 def main():
   """My main main"""
 
@@ -22,14 +16,24 @@ def main():
   model.load_state_dict(state_dict)
   model.eval()
   print(model)
+  print()
+
+  activation = {}
+  def get_activation(name):
+    def hook(model, input, output):
+      print('model:', model)
+      activation[name] = output.detach()
+
+    return hook
 
   model.relu.register_forward_hook(get_activation('relu'))
 
   input = torch.randint(0, 100, (32, 132005))
   output = model(input)
+  print('model output shape:', output.shape)
 
-  print(output.shape)
-  print(activation['relu'])
+  print('activation[relu]:', activation['relu'])
+  print('activation[relu] shape:', activation['relu'].shape)
 
 if __name__ == "__main__":
 
