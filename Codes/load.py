@@ -15,25 +15,20 @@ def main():
   state_dict = torch.load('Model/model.pt')
   model.load_state_dict(state_dict)
   model.eval()
-  print(model)
-  print()
 
-  activation = {}
-  def get_activation(name):
+  activations = {}
+  def get_activation():
     def hook(model, input, output):
       print('model:', model)
-      activation[name] = output.detach()
+      activations['relu_out'] = output.detach()
 
     return hook
 
-  model.relu.register_forward_hook(get_activation('relu'))
+  model.relu.register_forward_hook(get_activation())
 
-  input = torch.randint(0, 100, (32, 132005))
-  output = model(input)
-  print('model output shape:', output.shape)
-
-  print('activation[relu]:', activation['relu'])
-  print('activation[relu] shape:', activation['relu'].shape)
+  model(torch.randint(0, 100, (32, 132005)))
+  print('activations:', activations['relu_out'])
+  print('activations shape:', activations['relu_out'].shape)
 
 if __name__ == "__main__":
 
