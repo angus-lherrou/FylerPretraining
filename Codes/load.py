@@ -17,14 +17,10 @@ def main():
   model.eval()
 
   activations = {}
-  def get_activation():
-    def hook(model, input, output):
-      print('model:', model)
-      activations['relu_out'] = output.detach()
+  def hook(model, input, output):
+    activations['relu_out'] = output
 
-    return hook
-
-  model.relu.register_forward_hook(get_activation())
+  model.relu.register_forward_hook(hook)
 
   model(torch.randint(0, 100, (32, 132005)))
   print('activations:', activations['relu_out'])
