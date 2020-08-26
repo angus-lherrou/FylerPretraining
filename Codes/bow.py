@@ -49,17 +49,20 @@ class BagOfEmbeddings(nn.Module):
       in_features=hidden_units,
       out_features=output_vocab_size)
 
-  def forward(self, texts):
-    """Forward pass"""
+  def forward(self, texts, return_hidden=False):
+    """Optionally return hidden layer activations"""
 
     output = self.embed(texts)
     output = torch.mean(output, dim=1)
-    output = self.hidden(output)
-    output = self.relu(output)
+    features = self.hidden(output) # pretrained representation
+    output = self.relu(features)   # maybe return these instead
     output = self.dropout(output)
     output = self.classifier(output)
 
-    return output
+    if return_hidden:
+      return features
+    else:
+      return output
 
 def make_data_loader(input_seqs, model_outputs, batch_size, partition):
   """DataLoader objects for train or dev/test sets"""
