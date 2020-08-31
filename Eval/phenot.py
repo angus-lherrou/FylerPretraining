@@ -17,7 +17,7 @@ from sklearn.model_selection import GridSearchCV
 
 # my python modules
 from dataphenot import DatasetProvider
-import bow, utils
+import bow, utils, metrics
 
 # ignore sklearn warnings
 def warn(*args, **kwargs):
@@ -51,7 +51,7 @@ def run_evaluation_dense():
   probs = classifier.predict_proba(x_test)
   metrics.report_roc_auc(y_test, probs[:, 1])
 
-def make_data_loader(input_seqs, batch_size=32, max_len=None):
+def make_data_loader(input_seqs, batch_size, max_len):
   """Make DataLoader objects"""
 
   model_inputs = utils.pad_sequences(input_seqs, max_len=max_len)
@@ -71,7 +71,7 @@ def get_dense_representations(model, x):
   model.eval()
 
   # todo: figure out what max_len should be
-  data_loader = make_data_loader(x)
+  data_loader = make_data_loader(x, 32, 132005)
 
   # list of batched dense representations
   dense_x = []
@@ -107,8 +107,7 @@ def data_dense():
   # load training data first
   train_data_provider = DatasetProvider(
     train_data,
-    cfg.get('data', 'tokenizer_pickle'),
-    None)
+    cfg.get('data', 'tokenizer_pickle'))
 
   x_train, y_train = train_data_provider.load_as_int_seqs()
 
@@ -118,8 +117,7 @@ def data_dense():
   # now load the test set
   test_data_provider = DatasetProvider(
     test_data,
-    cfg.get('data', 'tokenizer_pickle'),
-    None)
+    cfg.get('data', 'tokenizer_pickle'))
 
   x_test, y_test = test_data_provider.load_as_int_seqs()
 
