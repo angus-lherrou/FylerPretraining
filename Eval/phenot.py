@@ -17,7 +17,7 @@ from sklearn.model_selection import GridSearchCV
 
 # my python modules
 from dataphenot import DatasetProvider
-import bow, utils, metrics
+import boe, utils, metrics
 
 # ignore sklearn warnings
 def warn(*args, **kwargs):
@@ -63,15 +63,15 @@ def make_data_loader(input_seqs, batch_size, max_len):
 
   return data_loader
 
-def get_dense_representations(model, x):
+def get_dense_representations(model, x, batch_size=16):
   """Run sparse x through pretrain model and get dense representations"""
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   model.to(device)
   model.eval()
 
-  # todo: figure out what max_len should be
-  data_loader = make_data_loader(x, 32, 132005)
+  # todo: set max_len here to match training data?
+  data_loader = make_data_loader(x, batch_size, None)
 
   # list of batched dense representations
   dense_x = []
@@ -93,7 +93,7 @@ def data_dense():
   train_data = os.path.join(base, cfg.get('data', 'train'))
   test_data = os.path.join(base, cfg.get('data', 'test'))
 
-  model = bow.BagOfEmbeddings(
+  model = boe.BagOfEmbeddings(
     input_vocab_size=cfg.getint('args', 'cui_vocab_size'),
     output_vocab_size=cfg.getint('args', 'code_vocab_size'),
     embed_dim=cfg.getint('model', 'embed'),
