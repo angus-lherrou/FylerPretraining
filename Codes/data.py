@@ -107,7 +107,7 @@ class DatasetProvider:
       y.append(codes_as_string)
 
     # make x and y matrices
-    x = self.input_tokenizer.texts_to_seqs(x)
+    x = self.input_tokenizer.texts_as_sets_to_seqs(x)
     y = self.output_tokenizer.texts_to_seqs(y)
 
     # column zero is empty

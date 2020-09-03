@@ -37,7 +37,7 @@ class DatasetProvider:
         text = open(file_path).read()
         x.append(text)
 
-    x = self.tokenizer.texts_to_seqs(x)
+    x = self.tokenizer.texts_as_sets_to_seqs(x)
 
     return x, y
 
