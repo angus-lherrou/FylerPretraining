@@ -6,7 +6,7 @@ from torch.utils.data import TensorDataset, SequentialSampler, DataLoader
 # for sklearn grid search?
 np.random.seed(1337)
 
-import sys, os
+import sys, os, pickle
 sys.path.append('../Lib/')
 sys.path.append('../Codes/')
 
@@ -93,13 +93,18 @@ def data_dense():
   train_data = os.path.join(base, cfg.get('data', 'train'))
   test_data = os.path.join(base, cfg.get('data', 'test'))
 
-  model = boe.BagOfEmbeddings(
-    input_vocab_size=cfg.getint('args', 'cui_vocab_size'),
-    output_vocab_size=cfg.getint('args', 'code_vocab_size'),
-    embed_dim=cfg.getint('model', 'embed'),
-    hidden_units=cfg.getint('model', 'hidden'),
-    dropout_rate=cfg.getfloat('model', 'dropout'))
+  # load model configuration
+  pkl = open(cfg.get('data', 'config_pickle'), 'rb')
+  config = pickle.load(pkl)
 
+  # instantiate model and load parameters
+  model = boe.BagOfEmbeddings(
+    input_vocab_size=config['input_vocab_size'],
+    output_vocab_size=config['output_vocab_size'],
+    embed_dim=config['embed_dim'],
+    hidden_units=config['hidden_units'],
+    dropout_rate=config['dropout_rate'],
+    save_config=False)
   state_dict = torch.load(cfg.get('data', 'model_file'))
   model.load_state_dict(state_dict)
   model.eval()

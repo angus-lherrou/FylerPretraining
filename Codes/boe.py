@@ -12,7 +12,7 @@ from torch.utils.data import RandomSampler, SequentialSampler
 from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 
-import os, configparser, random
+import os, configparser, random, pickle
 import data, utils
 
 # deterministic determinism
@@ -20,6 +20,10 @@ torch.manual_seed(2020)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 random.seed(2020)
+
+# model and model config locations
+model_path = 'Model/model.pt'
+config_path = 'Model/config.p'
 
 class BagOfEmbeddings(nn.Module):
 
@@ -29,7 +33,8 @@ class BagOfEmbeddings(nn.Module):
     output_vocab_size,
     embed_dim,
     hidden_units,
-    dropout_rate):
+    dropout_rate,
+    save_config=True):
     """Constructor"""
 
     super(BagOfEmbeddings, self).__init__()
@@ -49,6 +54,17 @@ class BagOfEmbeddings(nn.Module):
     self.classifier = nn.Linear(
       in_features=hidden_units,
       out_features=output_vocab_size)
+
+    # save configuration for loading later
+    if save_config:
+      config = {
+        'input_vocab_size': input_vocab_size,
+        'output_vocab_size': output_vocab_size,
+        'embed_dim': embed_dim,
+        'hidden_units': hidden_units,
+        'dropout_rate': dropout_rate}
+      pickle_file = open(config_path, 'wb')
+      pickle.dump(config, pickle_file)
 
   def forward(self, texts, return_hidden=False):
     """Optionally return hidden layer activations"""
@@ -101,10 +117,10 @@ def fit(model, train_loader, val_loader, n_epochs):
     model.parameters(),
     lr=cfg.getfloat('model', 'lr'))
 
-  # scheduler = get_linear_schedule_with_warmup(
-  #   optimizer,
-  #   num_warmup_steps=100,
-  #   num_training_steps=1000)
+  scheduler = get_linear_schedule_with_warmup(
+    optimizer,
+    num_warmup_steps=100,
+    num_training_steps=1000)
 
   best_loss = float('inf')
   optimal_epochs = 0
@@ -127,7 +143,7 @@ def fit(model, train_loader, val_loader, n_epochs):
 
       torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
       optimizer.step()
-      # scheduler.step()
+      scheduler.step()
 
       train_loss += loss.item()
       num_train_steps += 1
@@ -139,7 +155,7 @@ def fit(model, train_loader, val_loader, n_epochs):
 
     if val_loss < best_loss:
       print('loss improved, saving model...')
-      torch.save(model.state_dict(), 'Model/model.pt')
+      torch.save(model.state_dict(), model_path)
       best_loss = val_loss
       optimal_epochs = epoch
 
