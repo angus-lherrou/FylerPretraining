@@ -9,7 +9,6 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.data import RandomSampler, SequentialSampler
 
-from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 
 import os, configparser, random, pickle
@@ -117,11 +116,6 @@ def fit(model, train_loader, val_loader, n_epochs):
     model.parameters(),
     lr=cfg.getfloat('model', 'lr'))
 
-  scheduler = get_linear_schedule_with_warmup(
-    optimizer,
-    num_warmup_steps=100,
-    num_training_steps=1000)
-
   best_loss = float('inf')
   optimal_epochs = 0
 
@@ -143,7 +137,6 @@ def fit(model, train_loader, val_loader, n_epochs):
 
       torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
       optimizer.step()
-      scheduler.step()
 
       train_loss += loss.item()
       num_train_steps += 1
