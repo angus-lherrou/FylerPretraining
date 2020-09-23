@@ -46,7 +46,8 @@ class BagOfEmbeddings(nn.Module):
       in_features=embed_dim,
       out_features=hidden_units)
 
-    self.relu = nn.ReLU()
+    # self.activation = nn.ReLU()
+    self.activation = nn.Tanh()
 
     self.dropout = nn.Dropout(dropout_rate)
 
@@ -70,8 +71,8 @@ class BagOfEmbeddings(nn.Module):
 
     output = self.embed(texts)
     output = torch.mean(output, dim=1)
-    features = self.hidden(output) # pretrained representation
-    output = self.relu(features)   # maybe return these instead
+    features = self.hidden(output)     # pretrained representation
+    output = self.activation(features) # maybe return these instead
     output = self.dropout(output)
     output = self.classifier(output)
 
