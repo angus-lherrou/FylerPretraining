@@ -144,7 +144,7 @@ def fit(model, train_loader, val_loader, n_epochs):
 
     av_tr_loss = train_loss / num_train_steps
     val_loss = evaluate(model, val_loader)
-    print('ep: %d, steps: %d, tr loss: %.3f, val loss: %.3f' % \
+    print('ep: %d, steps: %d, tr loss: %.4f, val loss: %.4f' % \
           (epoch, num_train_steps, av_tr_loss, val_loss))
 
     if val_loss < best_loss:
@@ -227,7 +227,7 @@ def main():
     train_loader,
     val_loader,
     cfg.getint('model', 'epochs'))
-  print('best loss %.3f after %d epochs' % (best_loss, optimal_epochs))
+  print('best loss %.4f after %d epochs' % (best_loss, optimal_epochs))
 
 if __name__ == "__main__":
 
