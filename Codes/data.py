@@ -91,7 +91,7 @@ class DatasetProvider:
 
     print('output vocab:', len(self.output_tokenizer.stoi))
 
-  def load(self):
+  def load_as_sequences(self):
     """Make x and y"""
 
     x = []

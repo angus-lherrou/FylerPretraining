@@ -189,10 +189,10 @@ def main():
     os.path.join(base, cfg.get('data', 'codes')),
     cfg.get('args', 'cui_vocab_size'),
     cfg.get('args', 'code_vocab_size'))
-  in_seqs, out_seqs = dp.load()
+  in_seqs, out_seqs = dp.load_as_sequences()
 
   tr_in_seqs, val_in_seqs, tr_out_seqs, val_out_seqs = train_test_split(
-    in_seqs, out_seqs, test_size=0.15, random_state=2020)
+    in_seqs, out_seqs, test_size=0.10, random_state=2020)
 
   print('loaded %d training and %d validation samples' % \
         (len(tr_in_seqs), len(val_in_seqs)))
