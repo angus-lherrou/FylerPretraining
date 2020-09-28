@@ -24,29 +24,24 @@ random.seed(2020)
 model_path = 'Model/model.pt'
 config_path = 'Model/config.p'
 
-class BagOfEmbeddings(nn.Module):
+class BagOfWords(nn.Module):
 
   def __init__(
     self,
     input_vocab_size,
     output_vocab_size,
-    embed_dim,
     hidden_units,
     dropout_rate,
     save_config=True):
     """Constructor"""
 
-    super(BagOfEmbeddings, self).__init__()
-
-    self.embed = nn.Embedding(
-      num_embeddings=input_vocab_size,
-      embedding_dim=embed_dim)
+    super(BagOfWords, self).__init__()
 
     self.hidden = nn.Linear(
-      in_features=embed_dim,
+      in_features=input_vocab_size,
       out_features=hidden_units)
 
-    self.activation = nn.ReLU()
+    self.activation = nn.Tanh()
 
     self.dropout = nn.Dropout(dropout_rate)
 
@@ -59,7 +54,6 @@ class BagOfEmbeddings(nn.Module):
       config = {
         'input_vocab_size': input_vocab_size,
         'output_vocab_size': output_vocab_size,
-        'embed_dim': embed_dim,
         'hidden_units': hidden_units,
         'dropout_rate': dropout_rate}
       pickle_file = open(config_path, 'wb')
@@ -68,9 +62,7 @@ class BagOfEmbeddings(nn.Module):
   def forward(self, texts, return_hidden=False):
     """Optionally return hidden layer activations"""
 
-    output = self.embed(texts)
-    output = torch.mean(output, dim=1)
-    features = self.hidden(output)     # pretrained representation
+    features = self.hidden(texts)      # pretrained representation
     output = self.activation(features) # maybe return these instead
     output = self.dropout(output)
     output = self.classifier(output)
@@ -80,10 +72,8 @@ class BagOfEmbeddings(nn.Module):
     else:
       return output
 
-def make_data_loader(input_seqs, model_outputs, batch_size, partition):
+def make_data_loader(model_inputs, model_outputs, batch_size, partition):
   """DataLoader objects for train or dev/test sets"""
-
-  model_inputs = utils.pad_sequences(input_seqs, max_len=None)
 
   # e.g. transformers take input ids and attn masks
   if type(model_inputs) is tuple:
@@ -203,21 +193,20 @@ def main():
   print('longest code sequence:', max_code_seq_len)
 
   train_loader = make_data_loader(
-    tr_in_seqs,
+    utils.sequences_to_matrix(tr_in_seqs, len(dp.input_tokenizer.stoi)),
     utils.sequences_to_matrix(tr_out_seqs, len(dp.output_tokenizer.stoi)),
     cfg.getint('model', 'batch'),
     'train')
 
   val_loader = make_data_loader(
-    val_in_seqs,
+    utils.sequences_to_matrix(val_in_seqs, len(dp.input_tokenizer.stoi)),
     utils.sequences_to_matrix(val_out_seqs, len(dp.output_tokenizer.stoi)),
     cfg.getint('model', 'batch'),
     'dev')
 
-  model = BagOfEmbeddings(
+  model = BagOfWords(
     input_vocab_size=len(dp.input_tokenizer.stoi),
     output_vocab_size=len(dp.output_tokenizer.stoi),
-    embed_dim=cfg.getint('model', 'embed'),
     hidden_units=cfg.getint('model', 'hidden'),
     dropout_rate=cfg.getfloat('model', 'dropout'))
 
