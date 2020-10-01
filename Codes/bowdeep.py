@@ -41,19 +41,16 @@ class BagOfWords(nn.Module):
     self.hidden1 = nn.Linear(
       in_features=input_vocab_size,
       out_features=hidden_units1)
-
     self.activation1 = nn.ReLU()
 
     self.hidden2 = nn.Linear(
-      in_features=5000,
+      in_features=hidden_units1,
       out_features=hidden_units2)
-
     self.activation2 = nn.ReLU()
 
     self.dropout = nn.Dropout(dropout_rate)
-
     self.classifier = nn.Linear(
-      in_features=5000,
+      in_features=hidden_units2,
       out_features=output_vocab_size)
 
     # save configuration for loading later
@@ -72,8 +69,9 @@ class BagOfWords(nn.Module):
 
     output1 = self.hidden1(texts)
     output1 = self.activation1(output1)
-    features = self.hidden2(output1)
-    output2 = self.activation2(features)
+
+    output2 = self.hidden2(output1)
+    output2 = self.activation2(output2)
 
     # residual connection
     output = output1 + output2
@@ -82,7 +80,7 @@ class BagOfWords(nn.Module):
     output = self.classifier(output)
 
     if return_hidden:
-      return features
+      return output2
     else:
       return output
 
@@ -221,8 +219,8 @@ def main():
   model = BagOfWords(
     input_vocab_size=len(dp.input_tokenizer.stoi),
     output_vocab_size=len(dp.output_tokenizer.stoi),
-    hidden_units1=5000,
-    hidden_units2=5000,
+    hidden_units1=cfg.getint('model', 'hidden'),
+    hidden_units2=cfg.getint('model', 'hidden'),
     dropout_rate=cfg.getfloat('model', 'dropout'))
 
   best_loss, optimal_epochs = fit(
