@@ -30,7 +30,8 @@ class BagOfWords(nn.Module):
     self,
     input_vocab_size,
     output_vocab_size,
-    hidden_units,
+    hidden_units1,
+    hidden_units2,
     dropout_rate,
     save_config=True):
     """Constructor"""
@@ -39,13 +40,13 @@ class BagOfWords(nn.Module):
 
     self.hidden1 = nn.Linear(
       in_features=input_vocab_size,
-      out_features=5000)
+      out_features=hidden_units1)
 
     self.activation1 = nn.ReLU()
 
     self.hidden2 = nn.Linear(
       in_features=5000,
-      out_features=5000)
+      out_features=hidden_units2)
 
     self.activation2 = nn.ReLU()
 
@@ -60,7 +61,8 @@ class BagOfWords(nn.Module):
       config = {
         'input_vocab_size': input_vocab_size,
         'output_vocab_size': output_vocab_size,
-        'hidden_units': hidden_units,
+        'hidden_units1': hidden_units1,
+        'hidden_units2': hidden_units2,
         'dropout_rate': dropout_rate}
       pickle_file = open(config_path, 'wb')
       pickle.dump(config, pickle_file)
@@ -68,10 +70,14 @@ class BagOfWords(nn.Module):
   def forward(self, texts, return_hidden=False):
     """Optionally return hidden layer activations"""
 
-    output = self.hidden1(texts)
-    output = self.activation1(output)
-    features = self.hidden2(output)
-    output = self.activation2(features)
+    output1 = self.hidden1(texts)
+    output1 = self.activation1(output1)
+    features = self.hidden2(output1)
+    output2 = self.activation2(features)
+
+    # residual connection
+    output = output1 + output2
+
     output = self.dropout(output)
     output = self.classifier(output)
 
@@ -215,7 +221,8 @@ def main():
   model = BagOfWords(
     input_vocab_size=len(dp.input_tokenizer.stoi),
     output_vocab_size=len(dp.output_tokenizer.stoi),
-    hidden_units=cfg.getint('model', 'hidden'),
+    hidden_units1=5000,
+    hidden_units2=5000,
     dropout_rate=cfg.getfloat('model', 'dropout'))
 
   best_loss, optimal_epochs = fit(
