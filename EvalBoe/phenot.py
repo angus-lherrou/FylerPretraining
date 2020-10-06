@@ -98,13 +98,7 @@ def data_dense():
   config = pickle.load(pkl)
 
   # instantiate model and load parameters
-  model = boe.BagOfEmbeddings(
-    input_vocab_size=config['input_vocab_size'],
-    output_vocab_size=config['output_vocab_size'],
-    embed_dim=config['embed_dim'],
-    hidden_units=config['hidden_units'],
-    dropout_rate=config['dropout_rate'],
-    save_config=False)
+  model = boe.BagOfEmbeddings(**config, save_config=False)
   state_dict = torch.load(cfg.get('data', 'model_file'))
   model.load_state_dict(state_dict)
   model.eval()
