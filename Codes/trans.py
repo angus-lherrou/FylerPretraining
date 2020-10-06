@@ -26,7 +26,7 @@ random.seed(2020)
 model_path = 'Model/model.pt'
 config_path = 'Model/config.p'
 
-class BagOfEmbeddings(nn.Module):
+class TransformerEncoder(nn.Module):
 
   def __init__(
     self,
@@ -42,7 +42,7 @@ class BagOfEmbeddings(nn.Module):
     save_config=True):
     """Constructor"""
 
-    super(BagOfEmbeddings, self).__init__()
+    super(TransformerEncoder, self).__init__()
 
     self.embed = nn.Embedding(
       num_embeddings=input_vocab_size,
@@ -60,7 +60,7 @@ class BagOfEmbeddings(nn.Module):
       out_features=hidden_units)
 
     self.activation = nn.ReLU()
-    
+
     self.dropout = nn.Dropout(dropout_rate)
 
     self.classifier = nn.Linear(
@@ -72,7 +72,8 @@ class BagOfEmbeddings(nn.Module):
       config = {
         'input_vocab_size': input_vocab_size,
         'output_vocab_size': output_vocab_size,
-        'embed_dim': d_model,
+        'd_model': d_model,
+        'd_inner': d_inner,
         'n_head': n_head,
         'd_k': d_k,
         'd_v': d_v,
@@ -230,7 +231,7 @@ def main():
     cfg.getint('model', 'batch'),
     'dev')
 
-  model = BagOfEmbeddings(
+  model = TransformerEncoder(
     input_vocab_size=len(dp.input_tokenizer.stoi),
     output_vocab_size=len(dp.output_tokenizer.stoi),
     d_model = cfg.getint('model', 'd_model'),
