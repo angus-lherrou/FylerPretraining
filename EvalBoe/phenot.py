@@ -81,7 +81,7 @@ def get_dense_representations(model, x, batch_size=16):
     batch_inputs = batch[0]
 
     with torch.no_grad():
-      logits = model(batch_inputs, return_hidden=True)
+      logits = model(batch_inputs, return_features=True)
       logits = logits.cpu()
       dense_x.append(logits.numpy())
 

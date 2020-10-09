@@ -37,7 +37,6 @@ class TransformerEncoder(nn.Module):
     n_head,
     d_k,
     d_v,
-    hidden_units,
     dropout_rate,
     save_config=True):
     """Constructor"""
@@ -55,45 +54,41 @@ class TransformerEncoder(nn.Module):
       d_k=d_k,
       d_v=d_v)
 
-    self.hidden = nn.Linear(
-      in_features=d_model,
-      out_features=hidden_units)
-
-    self.activation = nn.ReLU()
-
     self.dropout = nn.Dropout(dropout_rate)
 
     self.classifier = nn.Linear(
-      in_features=hidden_units,
+      in_features=d_model,
       out_features=output_vocab_size)
 
     # save configuration for loading later
     if save_config:
-      config = {
-        'input_vocab_size': input_vocab_size,
-        'output_vocab_size': output_vocab_size,
-        'd_model': d_model,
-        'd_inner': d_inner,
-        'n_head': n_head,
-        'd_k': d_k,
-        'd_v': d_v,
-        'hidden_units': hidden_units,
-        'dropout_rate': dropout_rate}
+      config = dict(
+        input_vocab_size=input_vocab_size,
+        output_vocab_size=output_vocab_size,
+        d_model=d_model,
+        d_inner=d_inner,
+        n_head=n_head,
+        d_k=d_k,
+        d_v=d_v,
+        dropout_rate=dropout_rate)
+
       pickle_file = open(config_path, 'wb')
       pickle.dump(config, pickle_file)
 
-  def forward(self, texts, return_hidden=False):
+  def forward(self, texts, return_features=False):
     """Optionally return hidden layer activations"""
 
     output = self.embed(texts)
     output, _ = self.trans(output)
-    output = torch.mean(output, dim=1)
-    features = self.hidden(output)     # pretrained representation
-    output = self.activation(features) # maybe return these instead
-    output = self.dropout(output)
+
+    # averaging for now, but need to
+    # try the [CLS] token instead
+    features = torch.mean(output, dim=1)
+
+    output = self.dropout(features)
     output = self.classifier(output)
 
-    if return_hidden:
+    if return_features:
       return features
     else:
       return output
@@ -239,7 +234,6 @@ def main():
     n_head = cfg.getint('model', 'n_head'),
     d_k = cfg.getint('model', 'd_k'),
     d_v = cfg.getint('model', 'd_v'),
-    hidden_units=cfg.getint('model', 'hidden'),
     dropout_rate=cfg.getfloat('model', 'dropout'))
 
   best_loss, optimal_epochs = fit(
