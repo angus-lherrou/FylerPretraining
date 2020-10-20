@@ -42,15 +42,13 @@ class DatasetProvider:
     # index inputs (cuis)
     self.input_tokenizer = tokenizer.Tokenizer(
       n_words=None if cui_vocab_size == 'all' else int(cui_vocab_size),
-      lower=False,
-      oov_token='oovtok')
+      lower=False)
     self.tokenize_input()
 
     # index outputs (codes)
     self.output_tokenizer = tokenizer.Tokenizer(
       n_words=None if code_vocab_size == 'all' else int(code_vocab_size),
-      lower=False,
-      oov_token='oovtok')
+      lower=False)
     self.tokenize_output()
 
   def index_codes(self, code_file, code_col, prefix, num_digits):
@@ -107,8 +105,8 @@ class DatasetProvider:
       y.append(codes_as_string)
 
     # make x and y matrices
-    x = self.input_tokenizer.texts_as_sets_to_seqs(x)
-    y = self.output_tokenizer.texts_to_seqs(y)
+    x = self.input_tokenizer.texts_as_sets_to_seqs(x, add_cls_token=True)
+    y = self.output_tokenizer.texts_to_seqs(y, add_cls_token=False)
 
     # column zero is empty
     # return x, y[:,1:]
