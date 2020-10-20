@@ -5,63 +5,80 @@ import collections
 class Tokenizer:
   """Tokenization and vectorization"""
 
-  def __init__(self, n_words, lower=False, oov_token='oovtok'):
+  def __init__(
+   self,
+   n_words,
+   lower=False,
+   padding_token='[PAD]',
+   unk_token='[UNK]',
+   cls_token='[CLS]'):
     """Construction deconstruction"""
 
     self.stoi = {}
     self.itos = {}
+    self.counts = collections.Counter()
 
-    self.n_words = None if n_words is None else n_words-1
+    # first three tokens are reserved
+    self.n_words = None if n_words is None else n_words-3
     self.lower = lower
-    self.oov = oov_token
+    self.unk = unk_token
+    self.cls = cls_token
 
-    self.stoi[oov_token] = 0
-    self.itos[0] = oov_token
+    self.stoi[padding_token] = 0
+    self.itos[0] = padding_token
+    self.stoi[unk_token] = 1
+    self.itos[1] = unk_token
+    self.stoi[cls_token] = 2
+    self.itos[2] = cls_token
 
   def fit_on_texts(self, texts):
     """Fit on a list of document strings"""
 
-    counts = collections.Counter()
-
     for text in texts:
       tokens = text.split()
-      counts.update(tokens)
+      self.counts.update(tokens)
 
-    index = 1
-    for token, _ in counts.most_common(self.n_words):
+    index = 3 # 0, 1, 2 already taken
+    for token, _ in self.counts.most_common(self.n_words):
       self.stoi[token] = index
       self.itos[index] = token
       index += 1
 
-  def texts_to_seqs(self, texts):
+  def texts_to_seqs(self, texts, add_cls_token=False):
     """List of strings to list of int sequences"""
 
     sequences = []
     for text in texts:
 
       sequence = []
+      if add_cls_token:
+        sequence.append(self.stoi[self.cls])
+
       for token in text.split():
         if token in self.stoi:
           sequence.append(self.stoi[token])
         else:
-          sequence.append(self.stoi[self.oov])
+          sequence.append(self.stoi[self.unk])
 
       sequences.append(sequence)
 
     return sequences
 
-  def texts_as_sets_to_seqs(self, texts):
+  def texts_as_sets_to_seqs(self, texts, add_cls_token=False):
     """Same as texts_to_sequences but treat texts as sets"""
 
     sequences = []
     for text in texts:
 
       sequence = []
+      if add_cls_token:
+        sequence.append(self.stoi[self.cls])
+
       for token in set(text.split()):
         if token in self.stoi:
           sequence.append(self.stoi[token])
         else:
-          sequence.append(self.stoi[self.oov])
+          sequence.append(self.stoi[self.unk])
 
       sequences.append(sequence)
 
@@ -74,11 +91,12 @@ if __name__ == "__main__":
            'again and again',
            'the owls are happening']
 
-  tokenizer = Tokenizer(n_words=5)
+  tokenizer = Tokenizer(n_words=6)
 
   tokenizer.fit_on_texts(sents)
-  print(tokenizer.stoi)
-  print(tokenizer.itos)
+  print('counts:', tokenizer.counts)
+  print('stoi:', tokenizer.stoi)
+  print('itos:', tokenizer.itos)
 
-  seqs = tokenizer.texts_to_sequences(sents)
+  seqs = tokenizer.texts_to_seqs(sents, add_cls_token=True)
   print(seqs)
