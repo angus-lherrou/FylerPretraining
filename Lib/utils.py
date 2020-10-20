@@ -31,5 +31,9 @@ def sequences_to_matrix(seqs, n_columns):
 if __name__ == "__main__":
 
   seqs = [[1, 2, 3, 4], [5, 7, 5], [6, 6, 6, 1, 1, 1]]
-  output = sequences_to_matrix(seqs, 8)
+
+  output = sequences_to_matrix(seqs, 10)
+  print(output)
+
+  output = pad_sequences(seqs, max_len=3)
   print(output)
