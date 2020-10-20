@@ -81,9 +81,8 @@ class TransformerEncoder(nn.Module):
     output = self.embed(texts)
     output, _ = self.trans(output)
 
-    # averaging for now, but need to
-    # try the [CLS] token instead
-    features = torch.mean(output, dim=1)
+    # features = torch.mean(output, dim=1)
+    features = output[:, 0, :]
 
     output = self.dropout(features)
     output = self.classifier(output)
