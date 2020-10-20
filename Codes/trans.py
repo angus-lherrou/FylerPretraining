@@ -93,10 +93,8 @@ class TransformerEncoder(nn.Module):
     else:
       return output
 
-def make_data_loader(input_seqs, model_outputs, batch_size, partition):
+def make_data_loader(model_inputs, model_outputs, batch_size, partition):
   """DataLoader objects for train or dev/test sets"""
-
-  model_inputs = utils.pad_sequences(input_seqs, max_len=None)
 
   # e.g. transformers take input ids and attn masks
   if type(model_inputs) is tuple:
@@ -211,17 +209,19 @@ def main():
 
   max_cui_seq_len = max(len(seq) for seq in tr_in_seqs)
   max_code_seq_len = max(len(seq) for seq in tr_out_seqs)
+  max_len = cfg.getint('args', 'max_input_seq')
   print('longest cui sequence:', max_cui_seq_len)
+  print('truncating to:', max_len)
   print('longest code sequence:', max_code_seq_len)
 
   train_loader = make_data_loader(
-    tr_in_seqs,
+    utils.pad_sequences(tr_in_seqs, max_len=max_len),
     utils.sequences_to_matrix(tr_out_seqs, len(dp.output_tokenizer.stoi)),
     cfg.getint('model', 'batch'),
     'train')
 
   val_loader = make_data_loader(
-    val_in_seqs,
+    utils.pad_sequences(val_in_seqs, max_len=max_len),
     utils.sequences_to_matrix(val_out_seqs, len(dp.output_tokenizer.stoi)),
     cfg.getint('model', 'batch'),
     'dev')
