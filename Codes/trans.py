@@ -38,6 +38,7 @@ class TransformerEncoder(nn.Module):
     d_k,
     d_v,
     dropout_rate,
+    max_len,
     save_config=True):
     """Constructor"""
 
@@ -70,7 +71,8 @@ class TransformerEncoder(nn.Module):
         n_head=n_head,
         d_k=d_k,
         d_v=d_v,
-        dropout_rate=dropout_rate)
+        dropout_rate=dropout_rate,
+        max_len=max_len)
 
       pickle_file = open(config_path, 'wb')
       pickle.dump(config, pickle_file)
@@ -208,19 +210,17 @@ def main():
 
   max_cui_seq_len = max(len(seq) for seq in tr_in_seqs)
   max_code_seq_len = max(len(seq) for seq in tr_out_seqs)
-  max_len = cfg.getint('args', 'max_input_seq')
   print('longest cui sequence:', max_cui_seq_len)
-  print('truncating to:', max_len)
   print('longest code sequence:', max_code_seq_len)
 
   train_loader = make_data_loader(
-    utils.pad_sequences(tr_in_seqs, max_len=max_len),
+    utils.pad_sequences(tr_in_seqs, max_len=cfg.getint('args', 'max_len')),
     utils.sequences_to_matrix(tr_out_seqs, len(dp.output_tokenizer.stoi)),
     cfg.getint('model', 'batch'),
     'train')
 
   val_loader = make_data_loader(
-    utils.pad_sequences(val_in_seqs, max_len=max_len),
+    utils.pad_sequences(val_in_seqs, max_len=cfg.getint('args', 'max_len')),
     utils.sequences_to_matrix(val_out_seqs, len(dp.output_tokenizer.stoi)),
     cfg.getint('model', 'batch'),
     'dev')
@@ -233,7 +233,8 @@ def main():
     n_head = cfg.getint('model', 'n_head'),
     d_k = cfg.getint('model', 'd_k'),
     d_v = cfg.getint('model', 'd_v'),
-    dropout_rate=cfg.getfloat('model', 'dropout'))
+    dropout_rate=cfg.getfloat('model', 'dropout'),
+    max_len=cfg.getint('args', 'max_len'))
 
   best_loss, optimal_epochs = fit(
     model,

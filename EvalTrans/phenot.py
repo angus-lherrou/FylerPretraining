@@ -63,7 +63,7 @@ def make_data_loader(input_seqs, batch_size, max_len):
 
   return data_loader
 
-def get_dense_representations(model, x, batch_size=16):
+def get_dense_representations(model, x, max_len, batch_size=16):
   """Run sparse x through pretrain model and get dense representations"""
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -71,7 +71,7 @@ def get_dense_representations(model, x, batch_size=16):
   model.eval()
 
   # todo: set max_len here to match training data?
-  data_loader = make_data_loader(x, batch_size, 1000)
+  data_loader = make_data_loader(x, batch_size, max_len)
 
   # list of batched dense representations
   dense_x = []
@@ -110,10 +110,8 @@ def data_dense():
 
   x_train, y_train = train_data_provider.load_as_int_seqs()
 
-  # TODO: save and retrieve max input sequence here
-
   # make training vectors for target task
-  x_train = get_dense_representations(model, x_train)
+  x_train = get_dense_representations(model, x_train, config['max_len'])
 
   # now load the test set
   test_data_provider = DatasetProvider(
@@ -123,7 +121,7 @@ def data_dense():
   x_test, y_test = test_data_provider.load_as_int_seqs()
 
   # make test vectors for target task
-  x_test = get_dense_representations(model, x_test)
+  x_test = get_dense_representations(model, x_test, config['max_len'])
 
   return x_train, y_train, x_test, y_test
 
