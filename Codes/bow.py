@@ -65,7 +65,9 @@ class BagOfWords(nn.Module):
     """Never trust pytorch default weight initialization"""
 
     torch.nn.init.xavier_uniform_(self.hidden.weight)
+    torch.nn.init.xavier_uniform_(self.classifier.weight)
     torch.nn.init.zeros_(self.hidden.bias)
+    torch.nn.init.zeros_(self.classifier.weight)
 
   def forward(self, texts, return_hidden=False):
     """Optionally return hidden layer activations"""
