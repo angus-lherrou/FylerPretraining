@@ -17,7 +17,7 @@ from sklearn.model_selection import GridSearchCV
 
 # my python modules
 from dataphenot import DatasetProvider
-import bowdeep, utils, metrics
+import bow, utils, metrics
 
 # ignore sklearn warnings
 def warn(*args, **kwargs):
@@ -89,7 +89,7 @@ def data_dense():
   config = pickle.load(pkl)
 
   # instantiate model and load parameters
-  model = bowdeep.BagOfWords(**config, save_config=False)
+  model = bow.BagOfWords(**config, save_config=False)
   state_dict = torch.load(cfg.get('data', 'model_file'))
   model.load_state_dict(state_dict)
   model.eval()
