@@ -49,6 +49,8 @@ class BagOfWords(nn.Module):
       in_features=hidden_units,
       out_features=output_vocab_size)
 
+    self.init_weights()
+
     # save configuration for loading later
     if save_config:
       config = {
@@ -58,6 +60,12 @@ class BagOfWords(nn.Module):
         'dropout_rate': dropout_rate}
       pickle_file = open(config_path, 'wb')
       pickle.dump(config, pickle_file)
+
+  def init_weights(self):
+    """Never trust pytorch default weight initialization"""
+
+    torch.nn.init.xavier_uniform_(self.hidden.weight)
+    torch.nn.init.zeros_(self.hidden.bias)
 
   def forward(self, texts, return_hidden=False):
     """Optionally return hidden layer activations"""
