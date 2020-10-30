@@ -67,7 +67,7 @@ class BagOfWords(nn.Module):
     torch.nn.init.xavier_uniform_(self.hidden.weight)
     torch.nn.init.xavier_uniform_(self.classifier.weight)
     torch.nn.init.zeros_(self.hidden.bias)
-    torch.nn.init.zeros_(self.classifier.weight)
+    torch.nn.init.zeros_(self.classifier.bias)
 
   def forward(self, texts, return_hidden=False):
     """Optionally return hidden layer activations"""
