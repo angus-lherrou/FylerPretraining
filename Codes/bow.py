@@ -72,8 +72,8 @@ class BagOfWords(nn.Module):
   def forward(self, texts, return_hidden=False):
     """Optionally return hidden layer activations"""
 
-    features = self.hidden(texts)      # pretrained representation
-    output = self.activation(features) # maybe return these instead
+    features = self.hidden(texts)
+    output = self.activation(features)
     output = self.dropout(output)
     output = self.classifier(output)
 
