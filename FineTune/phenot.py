@@ -7,6 +7,7 @@ sys.path.append('../Lib/')
 sys.path.append('../Codes/')
 
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score
 
 import configparser, torch, shutil
 
@@ -49,7 +50,7 @@ def fit(model, train_loader, val_loader, weights, n_epochs):
     model.parameters(),
     lr=cfg.getfloat('model', 'lr'))
 
-  best_loss = float('inf')
+  best_roc_auc = 0
   optimal_epochs = 0
 
   for epoch in range(1, n_epochs + 1):
@@ -73,22 +74,23 @@ def fit(model, train_loader, val_loader, weights, n_epochs):
       num_train_steps += 1
 
     av_tr_loss = train_loss / num_train_steps
-    val_loss = evaluate(model, val_loader, weights)
-    print('ep: %d, steps: %d, tr loss: %.4f, val loss: %.4f' % \
-          (epoch, num_train_steps, av_tr_loss, val_loss))
+    val_loss, val_roc_auc = evaluate(model, val_loader, weights)
+    print('ep: %d, steps: %d, tr loss: %.4f, val loss: %.4f, val roc: %.4f' % \
+          (epoch, num_train_steps, av_tr_loss, val_loss, val_roc_auc))
 
-    if val_loss < best_loss:
-      print('loss improved, saving model...')
+    if val_roc_auc > best_roc_auc:
+      print('roc auc improved, saving model...')
       torch.save(model.state_dict(), model_path)
-      best_loss = val_loss
+      best_roc_auc = val_roc_auc
       optimal_epochs = epoch
 
-  return best_loss, optimal_epochs
+  return best_roc_auc, optimal_epochs
 
 def evaluate(model, data_loader, weights):
   """Evaluation routine"""
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+  weights = weights.to(device)
   model.to(device)
 
   cross_entropy_loss = torch.nn.CrossEntropyLoss(weights)
@@ -96,8 +98,10 @@ def evaluate(model, data_loader, weights):
 
   model.eval()
 
-  for batch in data_loader:
+  all_labels = []
+  all_probs = []
 
+  for batch in data_loader:
     batch = tuple(t.to(device) for t in batch)
     batch_inputs, batch_outputs = batch
 
@@ -105,11 +109,20 @@ def evaluate(model, data_loader, weights):
       logits = model(batch_inputs)
       loss = cross_entropy_loss(logits, batch_outputs)
 
+    batch_logits = logits.detach().to('cpu')
+    batch_outputs = batch_outputs.to('cpu')
+    batch_probs = torch.nn.functional.softmax(batch_logits, dim=1)[:, 1]
+
+    all_labels.extend(batch_outputs.tolist())
+    all_probs.extend(batch_probs.tolist())
+
     total_loss += loss.item()
     num_steps += 1
 
   av_loss = total_loss / num_steps
-  return av_loss
+  roc_auc = roc_auc_score(all_labels, all_probs)
+
+  return av_loss, roc_auc
 
 def main():
   """Data to feed into code prediction model"""
@@ -124,7 +137,7 @@ def main():
   model.load_state_dict(state_dict)
   model.eval()
 
-  # replace the old classification layer
+  # new classification layer
   model.classifier = torch.nn.Linear(
     in_features=config['hidden_units'],
     out_features=2)
@@ -135,7 +148,6 @@ def main():
     cfg.get('data', 'tokenizer_pickle'))
 
   x_train, y_train = train_data_provider.load_as_int_seqs()
-
   x_train, x_val, y_train, y_val = train_test_split(
     x_train, y_train, test_size=0.10, random_state=2020)
 
@@ -160,13 +172,13 @@ def main():
   label_counts = torch.bincount(torch.tensor(y_train))
   weights = len(y_train) / (2.0 * label_counts)
 
-  best_loss, optimal_epochs = fit(
+  best_roc_auc, optimal_epochs = fit(
     model,
     train_loader,
     val_loader,
     weights,
     cfg.getint('model', 'epochs'))
-  print('best loss %.4f after %d epochs' % (best_loss, optimal_epochs))
+  print('best roc %.4f after %d epochs' % (best_roc_auc, optimal_epochs))
 
   # now load the test set
   test_data_provider = DatasetProvider(
