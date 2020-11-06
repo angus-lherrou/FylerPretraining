@@ -79,8 +79,7 @@ def fit(model, train_loader, val_loader, weights, n_epochs):
           (epoch, num_train_steps, av_tr_loss, val_loss, val_roc_auc))
 
     if val_roc_auc > best_roc_auc:
-      print('roc auc improved, saving model...')
-      torch.save(model.state_dict(), model_path)
+      print('roc auc improved...')
       best_roc_auc = val_roc_auc
       optimal_epochs = epoch
 
