@@ -124,8 +124,8 @@ def evaluate(model, data_loader, weights):
 
   return av_loss, roc_auc
 
-def main():
-  """Data to feed into code prediction model"""
+def eval_on_dev():
+  """Split train into train and dev and fit"""
 
   # load model configuration
   pkl = open(cfg.get('data', 'config_pickle'), 'rb')
@@ -180,17 +180,61 @@ def main():
     cfg.getint('model', 'epochs'))
   print('best roc %.4f after %d epochs' % (best_roc_auc, optimal_epochs))
 
+  return optimal_epochs
+
+def eval_on_test(n_epochs):
+  """Train on training set and evaluate on test"""
+
+  # load model configuration
+  pkl = open(cfg.get('data', 'config_pickle'), 'rb')
+  config = pickle.load(pkl)
+
+  # instantiate model and load parameters
+  model = bow.BagOfWords(**config, save_config=False)
+  state_dict = torch.load(cfg.get('data', 'model_file'))
+  model.load_state_dict(state_dict)
+  model.eval()
+
+  # new classification layer
+  model.classifier = torch.nn.Linear(
+    in_features=config['hidden_units'],
+    out_features=2)
+
+  # load training data first
+  train_data_provider = DatasetProvider(
+    os.path.join(base, cfg.get('data', 'train')),
+    cfg.get('data', 'tokenizer_pickle'))
+
   # now load the test set
   test_data_provider = DatasetProvider(
     os.path.join(base, cfg.get('data', 'test')),
     cfg.get('data', 'tokenizer_pickle'))
 
+  x_train, y_train = train_data_provider.load_as_int_seqs()
   x_test, y_test = test_data_provider.load_as_int_seqs()
-  x_test = utils.sequences_to_matrix(
+
+  x_train = utils.sequences_to_matrix(
+    x_train,
+    config['input_vocab_size'])
+  x_val = utils.sequences_to_matrix(
     x_test,
     config['input_vocab_size'])
 
-  return x_train, y_train, x_test, y_test
+  train_loader = make_data_loader(
+    x_train,
+    torch.tensor(y_train),
+    cfg.getint('model', 'batch'),
+    'train')
+  val_loader = make_data_loader(
+    x_val,
+    torch.tensor(y_test),
+    cfg.getint('model', 'batch'),
+    'dev')
+
+  label_counts = torch.bincount(torch.tensor(y_train))
+  weights = len(y_train) / (2.0 * label_counts)
+
+  fit(model, train_loader, val_loader, weights, n_epochs)
 
 if __name__ == "__main__":
 
@@ -202,4 +246,5 @@ if __name__ == "__main__":
     shutil.rmtree(model_dir)
   os.mkdir(model_dir)
 
-  main()
+  optimal_epochs = eval_on_dev()
+  eval_on_test(optimal_epochs)
