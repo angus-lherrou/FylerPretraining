@@ -15,10 +15,6 @@ import configparser, torch, shutil
 from dataphenot import DatasetProvider
 import bow, utils, metrics
 
-# local model path
-model_path = 'Model/model.pt'
-model_dir = 'Model/'
-
 def make_data_loader(model_inputs, model_outputs, batch_size, partition):
   """DataLoader objects for train or dev/test sets"""
 
@@ -143,7 +139,7 @@ def eval_on_dev():
   torch.nn.init.xavier_uniform_(model.classifier.weight)
   torch.nn.init.zeros_(model.classifier.bias)
 
-  # load training data first
+  # load training data
   train_data_provider = DatasetProvider(
     os.path.join(base, cfg.get('data', 'train')),
     cfg.get('data', 'tokenizer_pickle'))
@@ -202,12 +198,12 @@ def eval_on_test(n_epochs):
     in_features=config['hidden_units'],
     out_features=2)
 
-  # load training data first
+  # training data
   train_data_provider = DatasetProvider(
     os.path.join(base, cfg.get('data', 'train')),
     cfg.get('data', 'tokenizer_pickle'))
 
-  # now load the test set
+  # test set
   test_data_provider = DatasetProvider(
     os.path.join(base, cfg.get('data', 'test')),
     cfg.get('data', 'tokenizer_pickle'))
@@ -218,7 +214,7 @@ def eval_on_test(n_epochs):
   x_train = utils.sequences_to_matrix(
     x_train,
     config['input_vocab_size'])
-  x_val = utils.sequences_to_matrix(
+  x_test = utils.sequences_to_matrix(
     x_test,
     config['input_vocab_size'])
 
@@ -227,8 +223,8 @@ def eval_on_test(n_epochs):
     torch.tensor(y_train),
     cfg.getint('model', 'batch'),
     'train')
-  val_loader = make_data_loader(
-    x_val,
+  test_loader = make_data_loader(
+    x_test,
     torch.tensor(y_test),
     cfg.getint('model', 'batch'),
     'dev')
@@ -236,17 +232,13 @@ def eval_on_test(n_epochs):
   label_counts = torch.bincount(torch.tensor(y_train))
   weights = len(y_train) / (2.0 * label_counts)
 
-  fit(model, train_loader, val_loader, weights, n_epochs)
+  fit(model, train_loader, test_loader, weights, n_epochs)
 
 if __name__ == "__main__":
 
   cfg = configparser.ConfigParser()
   cfg.read(sys.argv[1])
   base = os.environ['DATA_ROOT']
-
-  if os.path.isdir(model_dir):
-    shutil.rmtree(model_dir)
-  os.mkdir(model_dir)
 
   optimal_epochs = eval_on_dev()
   eval_on_test(optimal_epochs)
