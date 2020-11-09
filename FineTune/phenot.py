@@ -140,6 +140,8 @@ def eval_on_dev():
   model.classifier = torch.nn.Linear(
     in_features=config['hidden_units'],
     out_features=2)
+  torch.nn.init.xavier_uniform_(model.classifier.weight)
+  torch.nn.init.zeros_(model.classifier.bias)
 
   # load training data first
   train_data_provider = DatasetProvider(
@@ -148,8 +150,9 @@ def eval_on_dev():
 
   x_train, y_train = train_data_provider.load_as_int_seqs()
   x_train, x_val, y_train, y_val = train_test_split(
-    x_train, y_train, test_size=0.10, random_state=2020)
+    x_train, y_train, test_size=0.20, random_state=2020)
 
+  # convert to (n_train x vocabl_size) matrix
   x_train = utils.sequences_to_matrix(
     x_train,
     config['input_vocab_size'])
