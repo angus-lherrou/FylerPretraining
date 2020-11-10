@@ -33,7 +33,7 @@ def make_data_loader(model_inputs, model_outputs, batch_size, partition):
 
   return data_loader
 
-def fit(model, train_loader, val_loader, weights, n_epochs):
+def fit(model, train_loader, test_loader, weights, n_epochs):
   """Training routine"""
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -70,7 +70,7 @@ def fit(model, train_loader, val_loader, weights, n_epochs):
       num_train_steps += 1
 
     av_tr_loss = train_loss / num_train_steps
-    val_loss, val_roc_auc = evaluate(model, val_loader, weights)
+    val_loss, val_roc_auc = evaluate(model, test_loader, weights)
     print('ep: %d, steps: %d, tr loss: %.4f, val loss: %.4f, val roc: %.4f' % \
           (epoch, num_train_steps, av_tr_loss, val_loss, val_roc_auc))
 
@@ -130,7 +130,11 @@ def eval_on_dev():
   model = bow.BagOfWords(**config, save_config=False)
   state_dict = torch.load(cfg.get('data', 'model_file'))
   model.load_state_dict(state_dict)
-  model.eval()
+
+  # freeze if running as a feature extractor
+  if cfg.getboolean('model', 'freeze'):
+    for param in model.parameters():
+      param.requires_grad = False
 
   # new classification layer
   model.classifier = torch.nn.Linear(
