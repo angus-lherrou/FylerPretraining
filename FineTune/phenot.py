@@ -195,7 +195,6 @@ def eval_on_test(n_epochs):
   model = bow.BagOfWords(**config, save_config=False)
   state_dict = torch.load(cfg.get('data', 'model_file'))
   model.load_state_dict(state_dict)
-  model.eval()
 
   # new classification layer
   model.classifier = torch.nn.Linear(
