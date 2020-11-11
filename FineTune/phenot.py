@@ -119,8 +119,8 @@ def evaluate(model, data_loader, weights):
 
   return av_loss, roc_auc
 
-def eval_on_dev():
-  """Split train into train and dev and fit"""
+def get_model():
+  """Load pretrained model"""
 
   # load model configuration
   pkl = open(cfg.get('data', 'config_pickle'), 'rb')
@@ -143,12 +143,19 @@ def eval_on_dev():
   torch.nn.init.xavier_uniform_(model.classifier.weight)
   torch.nn.init.zeros_(model.classifier.bias)
 
+  return model, config
+
+def eval_on_dev():
+  """Split train into train and dev and fit"""
+
+  model, config = get_model()
+
   # load training data
   train_data_provider = DatasetProvider(
     os.path.join(base, cfg.get('data', 'train')),
     cfg.get('data', 'tokenizer_pickle'))
-
   x_train, y_train = train_data_provider.load_as_int_seqs()
+
   x_train, x_val, y_train, y_val = train_test_split(
     x_train, y_train, test_size=0.20, random_state=2020)
 
@@ -187,19 +194,7 @@ def eval_on_dev():
 def eval_on_test(n_epochs):
   """Train on training set and evaluate on test"""
 
-  # load model configuration
-  pkl = open(cfg.get('data', 'config_pickle'), 'rb')
-  config = pickle.load(pkl)
-
-  # instantiate model and load parameters
-  model = bow.BagOfWords(**config, save_config=False)
-  state_dict = torch.load(cfg.get('data', 'model_file'))
-  model.load_state_dict(state_dict)
-
-  # new classification layer
-  model.classifier = torch.nn.Linear(
-    in_features=config['hidden_units'],
-    out_features=2)
+  model, config = get_model()
 
   # training data
   train_data_provider = DatasetProvider(
