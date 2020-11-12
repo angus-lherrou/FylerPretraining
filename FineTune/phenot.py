@@ -9,11 +9,17 @@ sys.path.append('../Codes/')
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 
-import configparser, torch, shutil
+import configparser, torch, random
 
 # my python modules
 from dataphenot import DatasetProvider
-import bow, utils, metrics
+import bow, utils
+
+# deterministic determinism
+torch.manual_seed(2020)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+random.seed(2020)
 
 def make_data_loader(model_inputs, model_outputs, batch_size, partition):
   """DataLoader objects for train or dev/test sets"""
@@ -187,7 +193,7 @@ def eval_on_dev():
     val_loader,
     weights,
     cfg.getint('model', 'epochs'))
-  print('best roc %.4f after %d epochs' % (best_roc_auc, optimal_epochs))
+  print('best roc %.4f after %d epochs\n' % (best_roc_auc, optimal_epochs))
 
   return optimal_epochs
 
