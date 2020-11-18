@@ -27,6 +27,7 @@ def get_model():
   # load model configuration
   pkl = open(cfg.get('data', 'config_pickle'), 'rb')
   config = pickle.load(pkl)
+  print('model config:', config)
 
   # instantiate model
   model = bow.BagOfWords(**config, save_config=False)
@@ -192,7 +193,6 @@ def eval_on_dev():
   label_counts = torch.bincount(torch.tensor(y_train))
   weights = len(y_train) / (2.0 * label_counts)
   print('class weights:', weights)
-  weights = torch.tensor([1.0, 1.0])
 
   best_roc_auc, optimal_epochs = fit(
     model,
