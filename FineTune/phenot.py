@@ -21,6 +21,37 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 random.seed(2020)
 
+def get_model():
+  """Load pretrained model"""
+
+  # load model configuration
+  pkl = open(cfg.get('data', 'config_pickle'), 'rb')
+  config = pickle.load(pkl)
+
+  # instantiate model
+  model = bow.BagOfWords(**config, save_config=False)
+
+  # are we using pretrained weights?
+  if cfg.getboolean('model', 'scratch'):
+    model.init_weights()
+  else:
+    state_dict = torch.load(cfg.get('data', 'model_file'))
+    model.load_state_dict(state_dict)
+
+  # freeze if running as a feature extractor
+  if cfg.getboolean('model', 'freeze'):
+    for param in model.parameters():
+      param.requires_grad = False
+
+  # new classification layer
+  model.classifier = torch.nn.Linear(
+    in_features=config['hidden_units'],
+    out_features=2)
+  torch.nn.init.xavier_uniform_(model.classifier.weight)
+  torch.nn.init.zeros_(model.classifier.bias)
+
+  return model, config
+
 def make_data_loader(model_inputs, model_outputs, batch_size, partition):
   """DataLoader objects for train or dev/test sets"""
 
@@ -125,32 +156,6 @@ def evaluate(model, data_loader, weights):
 
   return av_loss, roc_auc
 
-def get_model():
-  """Load pretrained model"""
-
-  # load model configuration
-  pkl = open(cfg.get('data', 'config_pickle'), 'rb')
-  config = pickle.load(pkl)
-
-  # instantiate model and load parameters
-  model = bow.BagOfWords(**config, save_config=False)
-  state_dict = torch.load(cfg.get('data', 'model_file'))
-  model.load_state_dict(state_dict)
-
-  # freeze if running as a feature extractor
-  if cfg.getboolean('model', 'freeze'):
-    for param in model.parameters():
-      param.requires_grad = False
-
-  # new classification layer
-  model.classifier = torch.nn.Linear(
-    in_features=config['hidden_units'],
-    out_features=2)
-  torch.nn.init.xavier_uniform_(model.classifier.weight)
-  torch.nn.init.zeros_(model.classifier.bias)
-
-  return model, config
-
 def eval_on_dev():
   """Split train into train and dev and fit"""
 
@@ -186,6 +191,8 @@ def eval_on_dev():
 
   label_counts = torch.bincount(torch.tensor(y_train))
   weights = len(y_train) / (2.0 * label_counts)
+  print('class weights:', weights)
+  weights = torch.tensor([1.0, 1.0])
 
   best_roc_auc, optimal_epochs = fit(
     model,
