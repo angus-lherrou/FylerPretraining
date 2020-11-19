@@ -44,10 +44,11 @@ def get_model():
     for param in model.parameters():
       param.requires_grad = False
 
-  # new classification layer
+  # new classification layer and dropout
   model.classifier = torch.nn.Linear(
     in_features=config['hidden_units'],
     out_features=2)
+  model.dropout = torch.nn.Dropout(cfg.getfloat('model', 'dropout'))
   torch.nn.init.xavier_uniform_(model.classifier.weight)
   torch.nn.init.zeros_(model.classifier.bias)
 
