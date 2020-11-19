@@ -41,8 +41,10 @@ def get_model():
 
   # freeze if running as a feature extractor
   if cfg.getboolean('model', 'freeze'):
-    for param in model.parameters():
-      param.requires_grad = False
+    for name, param in model.named_parameters():
+      if 'hidden' in name:
+        print('freezing layer:', name)
+        param.requires_grad = False
 
   # new classification layer and dropout
   model.classifier = torch.nn.Linear(
