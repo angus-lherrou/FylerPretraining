@@ -6,7 +6,7 @@ sys.path.append('../Lib/')
 import torch
 import torch.nn as nn
 
-# from transformers import get_linear_schedule_with_warmup
+from transformers import get_linear_schedule_with_warmup
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
@@ -115,10 +115,10 @@ def fit(model, train_loader, val_loader, weights, n_epochs):
     model.parameters(),
     lr=cfg.getfloat('model', 'lr'))
 
-  # scheduler = get_linear_schedule_with_warmup(
-  #   optimizer,
-  #   num_warmup_steps=100,
-  #   num_training_steps=1000)
+  scheduler = get_linear_schedule_with_warmup(
+    optimizer,
+    num_warmup_steps=5,
+    num_training_steps=1000)
 
   best_roc_auc = 0
   optimal_epochs = 0
@@ -138,7 +138,7 @@ def fit(model, train_loader, val_loader, weights, n_epochs):
 
       torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
       optimizer.step()
-      # scheduler.step()
+      scheduler.step()
 
       train_loss += loss.item()
       num_train_steps += 1
