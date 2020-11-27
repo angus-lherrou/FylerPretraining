@@ -6,8 +6,6 @@ sys.path.append('../Lib/')
 import torch
 import torch.nn as nn
 
-from transformers import get_linear_schedule_with_warmup
-
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 
@@ -25,10 +23,13 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 random.seed(2020)
 
+# constants
+label2int = {'no':0, 'yes':1}
+
 class TransformerClassifier(nn.Module):
   """A transformative experience"""
 
-  def __init__(self, num_classes=2 ):
+  def __init__(self, num_classes=2):
     """We have some of the best constructors in the world"""
 
     super(TransformerClassifier, self).__init__()
@@ -115,11 +116,6 @@ def fit(model, train_loader, val_loader, weights, n_epochs):
     model.parameters(),
     lr=cfg.getfloat('model', 'lr'))
 
-  scheduler = get_linear_schedule_with_warmup(
-    optimizer,
-    num_warmup_steps=5,
-    num_training_steps=1000)
-
   best_roc_auc = 0
   optimal_epochs = 0
 
@@ -138,7 +134,6 @@ def fit(model, train_loader, val_loader, weights, n_epochs):
 
       torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
       optimizer.step()
-      scheduler.step()
 
       train_loss += loss.item()
       num_train_steps += 1
@@ -197,7 +192,7 @@ def select_model():
 
   tr_texts, tr_labels = datareader.DirDataReader.read(
     os.path.join(base, cfg.get('data', 'train')),
-    {'no':0, 'yes':1})
+    label2int)
 
   tr_texts, val_texts, tr_labels, val_labels = train_test_split(
     tr_texts, tr_labels, test_size=0.20, random_state=2020)
@@ -243,11 +238,11 @@ def run_evaluation(optimal_epochs):
 
   tr_texts, tr_labels = datareader.DirDataReader.read(
     os.path.join(base, cfg.get('data', 'train')),
-    {'no':0, 'yes':1})
+    label2int)
 
   test_texts, test_labels = datareader.DirDataReader.read(
     os.path.join(base, cfg.get('data', 'test')),
-    {'no':0, 'yes':1})
+    label2int)
 
   tok = tokenizer.Tokenizer(cfg.getint('data', 'vocab_size'))
   tok.fit_on_texts(tr_texts)
