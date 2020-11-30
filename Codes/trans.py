@@ -32,12 +32,6 @@ class TransformerEncoder(nn.Module):
     self,
     input_vocab_size,
     output_vocab_size,
-    d_model,
-    d_inner,
-    n_head,
-    d_k,
-    d_v,
-    dropout_rate,
     max_len,
     save_config=True):
     """Constructor"""
@@ -46,19 +40,22 @@ class TransformerEncoder(nn.Module):
 
     self.embed = nn.Embedding(
       num_embeddings=input_vocab_size,
-      embedding_dim=d_model)
+      embedding_dim=cfg.getint('model', 'd_model'))
 
-    self.trans = EncoderLayer(
-      d_model=d_model,
-      d_inner=d_inner,
-      n_head=n_head,
-      d_k=d_k,
-      d_v=d_v)
+    trans_encoders = []
+    for n in range(cfg.getint('model', 'n_layers')):
+      trans_encoders.append(EncoderLayer(
+        d_model=cfg.getint('model', 'd_model'),
+        d_inner=cfg.getint('model', 'd_inner'),
+        n_head=cfg.getint('model', 'n_head'),
+        d_k=cfg.getint('model', 'd_model'),
+        d_v=cfg.getint('model', 'd_model')))
+    self.trans_encoders = nn.ModuleList(trans_encoders)
 
-    self.dropout = nn.Dropout(dropout_rate)
+    self.dropout = nn.Dropout(cfg.getfloat('model', 'dropout'))
 
     self.classifier = nn.Linear(
-      in_features=d_model,
+      in_features=cfg.getint('model', 'd_model'),
       out_features=output_vocab_size)
 
     # save configuration for loading later
@@ -66,24 +63,35 @@ class TransformerEncoder(nn.Module):
       config = dict(
         input_vocab_size=input_vocab_size,
         output_vocab_size=output_vocab_size,
-        d_model=d_model,
-        d_inner=d_inner,
-        n_head=n_head,
-        d_k=d_k,
-        d_v=d_v,
-        dropout_rate=dropout_rate,
+        d_model=cfg.getint('model', 'd_model'),
+        d_inner=cfg.getint('model', 'd_inner'),
+        n_head=cfg.getint('model', 'n_head'),
+        d_k=cfg.getint('model', 'd_k'),
+        d_v=cfg.getint('model', 'd_v'),
+        dropout_rate=cfg.getfloat('model', 'dropout'),
         max_len=max_len)
 
       pickle_file = open(config_path, 'wb')
       pickle.dump(config, pickle_file)
 
+    self.init_weights()
+
+  def init_weights(self):
+    """Initialize the weights"""
+
+    self.embed.weight.data.uniform_(-0.1, 0.1)
+
   def forward(self, texts, return_features=False):
     """Optionally return hidden layer activations"""
 
     output = self.embed(texts)
-    output, _ = self.trans(output)
 
-    # features = torch.mean(output, dim=1)
+    # encoder input: (batch_size, seq_len, emb_dim)
+    # encoder output: (batch_size, seq_len, emb_dim)
+    for trans_encoder in self.trans_encoders:
+      output, _ = trans_encoder(output)
+
+    # use the first (CLS) token
     features = output[:, 0, :]
 
     output = self.dropout(features)
@@ -97,11 +105,7 @@ class TransformerEncoder(nn.Module):
 def make_data_loader(model_inputs, model_outputs, batch_size, partition):
   """DataLoader objects for train or dev/test sets"""
 
-  # e.g. transformers take input ids and attn masks
-  if type(model_inputs) is tuple:
-    tensor_dataset = TensorDataset(*model_inputs, model_outputs)
-  else:
-    tensor_dataset = TensorDataset(model_inputs, model_outputs)
+  tensor_dataset = TensorDataset(model_inputs, model_outputs)
 
   # use sequential sampler for dev and test
   if partition == 'train':
@@ -124,7 +128,7 @@ def fit(model, train_loader, val_loader, n_epochs):
 
   criterion = nn.BCEWithLogitsLoss()
 
-  optimizer = torch.optim.Adam(
+  optimizer = torch.optim.AdamW(
     model.parameters(),
     lr=cfg.getfloat('model', 'lr'))
 
@@ -132,12 +136,10 @@ def fit(model, train_loader, val_loader, n_epochs):
   optimal_epochs = 0
 
   for epoch in range(1, n_epochs + 1):
-
     model.train()
     train_loss, num_train_steps = 0, 0
 
     for batch in train_loader:
-
       optimizer.zero_grad()
 
       batch = tuple(t.to(device) for t in batch)
@@ -178,7 +180,6 @@ def evaluate(model, data_loader):
   model.eval()
 
   for batch in data_loader:
-
     batch = tuple(t.to(device) for t in batch)
     batch_inputs, batch_outputs = batch
 
@@ -203,8 +204,7 @@ def main():
   in_seqs, out_seqs = dp.load_as_sequences()
 
   tr_in_seqs, val_in_seqs, tr_out_seqs, val_out_seqs = train_test_split(
-    in_seqs, out_seqs, test_size=0.10, random_state=2020)
-
+    in_seqs, out_seqs, test_size=0.20, random_state=2020)
   print('loaded %d training and %d validation samples' % \
         (len(tr_in_seqs), len(val_in_seqs)))
 
@@ -228,12 +228,6 @@ def main():
   model = TransformerEncoder(
     input_vocab_size=len(dp.input_tokenizer.stoi),
     output_vocab_size=len(dp.output_tokenizer.stoi),
-    d_model = cfg.getint('model', 'd_model'),
-    d_inner = cfg.getint('model', 'd_inner'),
-    n_head = cfg.getint('model', 'n_head'),
-    d_k = cfg.getint('model', 'd_k'),
-    d_v = cfg.getint('model', 'd_v'),
-    dropout_rate=cfg.getfloat('model', 'dropout'),
     max_len=cfg.getint('args', 'max_len'))
 
   best_loss, optimal_epochs = fit(
