@@ -32,6 +32,13 @@ class TransformerEncoder(nn.Module):
     self,
     input_vocab_size,
     output_vocab_size,
+    d_model,
+    d_inner,
+    n_layers,
+    n_head,
+    d_k,
+    d_v,
+    dropout,
     max_len,
     save_config=True):
     """Constructor"""
@@ -40,22 +47,22 @@ class TransformerEncoder(nn.Module):
 
     self.embed = nn.Embedding(
       num_embeddings=input_vocab_size,
-      embedding_dim=cfg.getint('model', 'd_model'))
+      embedding_dim=d_model)
 
     trans_encoders = []
-    for n in range(cfg.getint('model', 'n_layers')):
+    for n in range(n_layers):
       trans_encoders.append(EncoderLayer(
-        d_model=cfg.getint('model', 'd_model'),
-        d_inner=cfg.getint('model', 'd_inner'),
-        n_head=cfg.getint('model', 'n_head'),
-        d_k=cfg.getint('model', 'd_model'),
-        d_v=cfg.getint('model', 'd_model')))
+        d_model=d_model,
+        d_inner=d_inner,
+        n_head=n_head,
+        d_k=d_k,
+        d_v=d_v))
     self.trans_encoders = nn.ModuleList(trans_encoders)
 
-    self.dropout = nn.Dropout(cfg.getfloat('model', 'dropout'))
+    self.dropout = nn.Dropout(dropout)
 
     self.classifier = nn.Linear(
-      in_features=cfg.getint('model', 'd_model'),
+      in_features=d_model,
       out_features=output_vocab_size)
 
     # save configuration for loading later
@@ -63,12 +70,13 @@ class TransformerEncoder(nn.Module):
       config = dict(
         input_vocab_size=input_vocab_size,
         output_vocab_size=output_vocab_size,
-        d_model=cfg.getint('model', 'd_model'),
-        d_inner=cfg.getint('model', 'd_inner'),
-        n_head=cfg.getint('model', 'n_head'),
-        d_k=cfg.getint('model', 'd_k'),
-        d_v=cfg.getint('model', 'd_v'),
-        dropout_rate=cfg.getfloat('model', 'dropout'),
+        d_model=d_model,
+        d_inner=d_inner,
+        n_layers=n_layers,
+        n_head=n_head,
+        d_k=d_k,
+        d_v=d_v,
+        dropout=dropout,
         max_len=max_len)
 
       pickle_file = open(config_path, 'wb')
@@ -228,6 +236,13 @@ def main():
   model = TransformerEncoder(
     input_vocab_size=len(dp.input_tokenizer.stoi),
     output_vocab_size=len(dp.output_tokenizer.stoi),
+    d_model=cfg.getint('model', 'd_model'),
+    d_inner=cfg.getint('model', 'd_inner'),
+    n_layers=cfg.getint('model', 'n_layers'),
+    n_head=cfg.getint('model', 'n_head'),
+    d_k=cfg.getint('model', 'd_k'),
+    d_v=cfg.getint('model', 'd_v'),
+    dropout=cfg.getfloat('model', 'dropout'),
     max_len=cfg.getint('args', 'max_len'))
 
   best_loss, optimal_epochs = fit(
