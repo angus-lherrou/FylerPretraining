@@ -222,23 +222,18 @@ def eval_on_test(n_epochs):
   x_train, y_train = train_data_provider.load_as_int_seqs()
   x_test, y_test = test_data_provider.load_as_int_seqs()
 
-  x_train = utils.sequences_to_matrix(
-    x_train,
-    config['input_vocab_size'])
-  x_test = utils.sequences_to_matrix(
-    x_test,
-    config['input_vocab_size'])
-
   train_loader = make_data_loader(
     x_train,
     torch.tensor(y_train),
     cfg.getint('model', 'batch'),
-    'train')
+    'train',
+    config['max_len'])
   test_loader = make_data_loader(
     x_test,
     torch.tensor(y_test),
     cfg.getint('model', 'batch'),
-    'dev')
+    'dev',
+    config['max_len'])
 
   label_counts = torch.bincount(torch.tensor(y_train))
   weights = len(y_train) / (2.0 * label_counts)
@@ -252,4 +247,4 @@ if __name__ == "__main__":
   base = os.environ['DATA_ROOT']
 
   optimal_epochs = eval_on_dev()
-  # eval_on_test(optimal_epochs)
+  eval_on_test(optimal_epochs)
