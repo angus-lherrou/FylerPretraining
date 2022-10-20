@@ -330,6 +330,7 @@ def data_dense(
 def main(
     cfg: configparser.ConfigParser, stdout=None, device=None, model_class: str = "fyler"
 ):
+    sys_stdout = sys.stdout
     if stdout is not None:
         sys.stdout = stdout
 
@@ -338,7 +339,8 @@ def main(
 
     run_evaluation_dense(cfg, device, model_class=model_class)
 
-    sys.stdout = sys.__stdout__
+    if stdout is not None:
+        sys.stdout = sys_stdout
 
 
 #

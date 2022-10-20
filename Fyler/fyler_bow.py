@@ -24,6 +24,7 @@ sys.path.append("../Lib/")
 
 import torch
 import torch.nn as nn
+import torch.backends.cudnn
 
 from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.data import RandomSampler, SequentialSampler
@@ -134,6 +135,7 @@ def fit(
     *,
     model_dir: Optional[pathlib.Path] = None,
     device: torch.device = None,
+    sys_stdout=sys.stdout,
 ):
     """Training routine"""
     if device is None:
@@ -189,8 +191,8 @@ def fit(
             best_loss = val_loss
             optimal_epochs = epoch
 
-    sys.__stdout__.write(f"Best model saved to {os.path.join(model_dir, MODEL_PATH)}\n")
-    sys.__stdout__.flush()
+    sys_stdout.write(f"Best model saved to {os.path.join(model_dir, MODEL_PATH)}\n")
+    sys_stdout.flush()
     return best_loss, optimal_epochs
 
 
@@ -238,6 +240,8 @@ def evaluate(model, data_loader, device=None):
 
 def main(cfg, model_dir: Optional[pathlib.Path] = None, stdout=None, device=None):
     """My main main"""
+
+    sys_stdout = sys.stdout
 
     if stdout is not None:
         sys.stdout = stdout
@@ -309,11 +313,12 @@ def main(cfg, model_dir: Optional[pathlib.Path] = None, stdout=None, device=None
         cfg.getint("model", "epochs"),
         model_dir=model_dir,
         device=device,
+        sys_stdout=sys_stdout
     )
     print("best loss %.4f after %d epochs" % (best_loss, optimal_epochs))
 
     if stdout is not None:
-        sys.stdout = sys.__stdout__
+        sys.stdout = sys_stdout
 
 
 @dataclass()
