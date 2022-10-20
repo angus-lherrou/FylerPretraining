@@ -4,12 +4,14 @@ import sys
 
 sys.path.append("../Lib/")
 
+import numpy as np
 import torch
 import torch.nn as nn
 
 from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.data import RandomSampler, SequentialSampler
 
+import sklearn.metrics
 from sklearn.model_selection import train_test_split
 
 import os, configparser, random, pickle
@@ -140,10 +142,10 @@ def fit(model, train_loader, val_loader, n_epochs):
             num_train_steps += 1
 
         av_tr_loss = train_loss / num_train_steps
-        val_loss = evaluate(model, val_loader)
+        val_loss, val_f1 = evaluate(model, val_loader)
         print(
-            "ep: %d, steps: %d, tr loss: %.4f, val loss: %.4f"
-            % (epoch, num_train_steps, av_tr_loss, val_loss)
+            "ep: %d, steps: %d, tr loss: %.4f, val loss: %.4f, val macro f1: %.4f"
+            % (epoch, num_train_steps, av_tr_loss, val_loss, val_f1)
         )
 
         if val_loss < best_loss:
@@ -166,6 +168,9 @@ def evaluate(model, data_loader):
 
     model.eval()
 
+    outputs = []
+    y_hats = []
+
     for batch in data_loader:
 
         batch = tuple(t.to(device) for t in batch)
@@ -175,11 +180,22 @@ def evaluate(model, data_loader):
             logits = model(batch_inputs)
             loss = criterion(logits, batch_outputs)
 
+        outputs.append(batch_outputs.cpu().numpy())
+        y_hats.append(np.round(torch.sigmoid(logits).cpu()))
+
         total_loss += loss.item()
         num_steps += 1
 
     av_loss = total_loss / num_steps
-    return av_loss
+
+    output_array = np.concatenate(outputs, axis=0)
+    y_hat_array = np.concatenate(y_hats, axis=0)
+
+    f1 = sklearn.metrics.f1_score(
+        output_array, y_hat_array, average="macro", zero_division=0
+    )
+
+    return av_loss, f1
 
 
 def main():

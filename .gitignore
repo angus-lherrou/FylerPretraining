@@ -1,2 +1,8 @@
 .idea
 Model
+PyTorchIcdModel/
+/**/.ipynb_checkpoints
+/**/__pycache__
+Fyler/_docs/
+images/
+Codes/mimic_10000cui_1000icd/
