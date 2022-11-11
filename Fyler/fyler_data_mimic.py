@@ -244,7 +244,11 @@ class FylerDatasetProvider:  # (DatasetProvider):
         )
 
         uniq_fyler_mrns = set(fyler_df["MRN"].unique())
-        pretrain_mrns = (uniq_fyler_mrns & self.mrns) - self.redcap_mrns
+
+        # FIXME: temporarily reduce the number of MRNs
+        # pretrain_mrns = (uniq_fyler_mrns & self.mrns) - self.redcap_mrns
+        pretrain_mrns = (uniq_fyler_mrns & self.mrns) & self.redcap_mrns
+        pretrain_mrns = set(pretrain_mrns[::4])
 
         note_window = datetime.timedelta(days=note_window_size)
         fyler_window = datetime.timedelta(days=fyler_window_size)
@@ -262,6 +266,8 @@ class FylerDatasetProvider:  # (DatasetProvider):
         else:
             val_cts = fyler_code_col.value_counts()
             all_fyler_codes = sorted(val_cts.nlargest(self.code_vocab_size).index)
+
+        print(f"Found {len(all_fyler_codes)} fyler codes")
 
         dictifier = DataDictifier(all_fyler_codes)
 
@@ -392,6 +398,7 @@ class FylerDatasetProvider:  # (DatasetProvider):
                     for code, yn in data.items()
                     if yn.upper() == "Y"
                 ]
+        print(f"Found {len(self.event2codes)} events")
 
     def tokenize_input(self):
         """Read text and map tokens to ints"""
@@ -411,13 +418,18 @@ class FylerDatasetProvider:  # (DatasetProvider):
 
     def tokenize_output(self):
         """Map codes to ints"""
+        all_codes = set()
 
         y = []  # prediction targets
         for _, codes in self.event2codes.items():
+            all_codes.update(set(codes))
             y.append(" ".join(codes))
         self.output_tokenizer.fit_on_texts(y)
-
+        print(f"Found {len(all_codes)} codes")
         print("output vocab:", len(self.output_tokenizer.stoi))
+        if len(self.output_tokenizer.stoi) < 10:
+            print(self.output_tokenizer.stoi)
+            print(self.output_tokenizer.itos)
 
     def load_as_sequences(self):
         """Make x and y"""
