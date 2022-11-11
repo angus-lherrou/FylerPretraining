@@ -165,7 +165,7 @@ class FylerDatasetProvider:  # (DatasetProvider):
 
         self.redcap_mrns = {
             float(item)
-            for (index, item) in redcap_df["Patient MRN"].dropna().iteritems()
+            for (index, item) in redcap_df["Patient MRN"].dropna().items()
             if type(item) is str and item.replace(".", "", 1).isnumeric()
         }
 

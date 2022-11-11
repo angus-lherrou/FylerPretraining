@@ -15,8 +15,6 @@ import datetime
 import math
 import sqlite3
 
-from typing import Union
-
 import pandas as pd
 import click
 from tqdm.auto import tqdm
@@ -131,13 +129,13 @@ class FylerDatasetProvider:  # (DatasetProvider):
 
         self.redcap_mrns = {
             float(item)
-            for (index, item) in redcap_df["Patient MRN"].dropna().iteritems()
+            for (index, item) in redcap_df["Patient MRN"].dropna().items()
             if type(item) is str and item.replace(".", "", 1).isnumeric()
         }
 
         if os.path.isdir(self.tokenizer_dir):
             shutil.rmtree(self.tokenizer_dir)
-        os.mkdir(self.tokenizer_dir)
+        os.makedirs(self.tokenizer_dir)
 
         # event ids -> Fyler code sets
         self.event2codes = {}
