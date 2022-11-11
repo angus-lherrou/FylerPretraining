@@ -248,7 +248,7 @@ class FylerDatasetProvider:  # (DatasetProvider):
         # FIXME: temporarily reduce the number of MRNs
         # pretrain_mrns = (uniq_fyler_mrns & self.mrns) - self.redcap_mrns
         pretrain_mrns = (uniq_fyler_mrns & self.mrns) & self.redcap_mrns
-        pretrain_mrns = set(pretrain_mrns[::4])
+        pretrain_mrns = set(list(pretrain_mrns)[::4])
 
         note_window = datetime.timedelta(days=note_window_size)
         fyler_window = datetime.timedelta(days=fyler_window_size)
