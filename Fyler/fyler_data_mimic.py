@@ -79,9 +79,10 @@ def fetch_several_notes(
 
 
 class DataDictifier:
-    def __init__(self, code_keys):
-        self.code_keys = code_keys
-        self.code_key_set = set(code_keys)
+    def __init__(self, code_keys: typing.List[float], num_digits: int):
+        code_keys = [str(int(code))[:num_digits] for code in code_keys]
+        self.code_keys: typing.List[str] = code_keys
+        self.code_key_set: typing.Set[str] = set(code_keys)
         if overlaps := ({"id", "text"} & self.code_key_set):
             raise ValueError(f"Label keys {overlaps} conflict with data schema")
 
@@ -263,7 +264,9 @@ class FylerDatasetProvider:  # (DatasetProvider):
             val_cts = fyler_code_col.value_counts()
             all_fyler_codes = sorted(val_cts.nlargest(self.code_vocab_size).index)
 
-        dictifier = DataDictifier(all_fyler_codes)
+        print(f"Found {len(all_fyler_codes)} fyler codes")
+
+        dictifier = DataDictifier(all_fyler_codes, num_digits)
 
         with open(os.path.join(self.save_dir, 'metadata.json'), 'w', encoding='utf8') as metadata_fd:
             json.dump(dictifier.metadata(), metadata_fd)
@@ -288,7 +291,7 @@ class FylerDatasetProvider:  # (DatasetProvider):
                         )
                     ].dropna(subset=[code_col])
                     codes = set(
-                        str(code)[:num_digits] for code in window_df[code_col].unique()
+                        str(int(code))[:num_digits] for code in window_df[code_col].unique()
                     )
                     if len(codes) >= fyler_min_count:
                         if align == "left":
@@ -418,6 +421,8 @@ class FylerDatasetProvider:  # (DatasetProvider):
         self.output_tokenizer.fit_on_texts(y)
 
         print("output vocab:", len(self.output_tokenizer.stoi))
+        if len(self.output_tokenizer.stoi) < 10:
+            raise RuntimeError(f"Too few output tokens: {self.output_tokenizer.stoi}")
 
     def load_as_sequences(self):
         """Make x and y"""
