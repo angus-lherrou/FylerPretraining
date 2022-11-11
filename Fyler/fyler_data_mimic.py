@@ -171,7 +171,7 @@ class FylerDatasetProvider:  # (DatasetProvider):
 
         if os.path.isdir(self.tokenizer_dir):
             shutil.rmtree(self.tokenizer_dir)
-        os.mkdir(self.tokenizer_dir)
+        os.makedirs(self.tokenizer_dir)
 
         # event ids -> Fyler code sets
         self.event2codes = {}
