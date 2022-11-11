@@ -225,6 +225,8 @@ class FylerDatasetProvider:  # (DatasetProvider):
             ):
                 shutil.rmtree(self.save_dir)
 
+        os.makedirs(self.save_dir)
+
         print(
             f"Generating data source in {self.save_dir} \n"
             f"with parameters: \n"
