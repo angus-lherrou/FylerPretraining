@@ -1,46 +1,81 @@
 import json
 import sys
+import random
+
 from pathlib import Path
 from typing import Optional
 
 import click
 
 
+START = """{
+  "data": [
+"""
+
+END = """
+  ]
+}
+"""
+
+
 @click.command()
 @click.argument("in_file", type=click.Path(path_type=Path, exists=True, dir_okay=False))
-@click.option("--out-file", "-o", type=click.Path(path_type=Path, exists=False, dir_okay=False), default=None)
-def main(in_file: Path, out_file: Optional[Path]):
+@click.option("--out-path", "-o", type=click.Path(path_type=Path, exists=False, file_okay=False), default=None)
+@click.option("--random-seed", "-s", type=int, default=42)
+@click.option("--proportion", "-p", type=float, default=.9)
+def main(in_file: Path, out_path: Optional[Path], random_seed: int, proportion: float):
     with in_file.open('r', encoding='utf8') as in_fd:
-        if out_file is None:
+        if out_path is None:
             out_fd = sys.stdout
+            out_fd.write(START)
         else:
-            out_fd = out_file.open('w', encoding='utf8')
-        # Write preamble
-        out_fd.write("""{
-  "data": [
-""")
+            train_fd = (out_path / 'train.json').open('w', encoding='utf8')
+            dev_fd = (out_path / 'dev.json').open('w', encoding='utf8')
+            train_fd.write(START)
+            dev_fd.write(START)
+
         in_fd_iter = iter(in_fd)
 
         # Write first line indented with no preceding comma-newline
         first_line = next(in_fd_iter)
-        out_fd.write("    ")
-        out_fd.write(first_line[:-1])
+
+        if out_path is None:
+            this_fd = out_fd
+        else:
+            random.seed(random_seed)
+            this_fd = train_fd if random.random() < proportion else dev_fd
+        this_fd.write("    ")
+        this_fd.write(first_line[:-1])
+
         count = 0
         for line in in_fd_iter:
+            if out_path is None:
+                this_fd = out_fd
+            else:
+                this_fd = train_fd if random.random() < proportion else dev_fd
             # Write rest of lines indented with preceding comma-newline
-            out_fd.write(",\n")
+            this_fd.write(",\n")
             count += 1
             if count % 32 == 0:
-                out_fd.flush()
-            out_fd.write("    ")
-            out_fd.write(line[:-1])
+                if out_path is None:
+                    out_fd.flush()
+                else:
+                    train_fd.flush()
+                    dev_fd.flush()
+            this_fd.write("    ")
+            this_fd.write(line[:-1])
 
-        out_fd.write("""
-  ]
-}
-""")
-        out_fd.flush()
-        out_fd.close()
+        if out_path is None:
+            out_fd.write(END)
+            out_fd.flush()
+            out_fd.close()
+        else:
+            train_fd.write(END)
+            train_fd.flush()
+            train_fd.close()
+            dev_fd.write(END)
+            dev_fd.flush()
+            dev_fd.close()
 
 
 if __name__ == '__main__':
