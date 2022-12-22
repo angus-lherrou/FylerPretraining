@@ -34,27 +34,25 @@ def main(in_file: Path, out_path: Optional[Path], random_seed: int, proportion: 
             train_fd.write(START)
             dev_fd.write(START)
 
-        in_fd_iter = iter(in_fd)
-
-        # Write first line indented with no preceding comma-newline
-        first_line = next(in_fd_iter)
-
-        if out_path is None:
-            this_fd = out_fd
-        else:
-            random.seed(random_seed)
-            this_fd = train_fd if random.random() < proportion else dev_fd
-        this_fd.write("    ")
-        this_fd.write(first_line[:-1])
+        out_has_first_line = False
+        train_has_first_line = False
+        dev_has_first_line = False
 
         count = 0
-        for line in in_fd_iter:
+
+        if out_path is not None:
+            random.seed(random_seed)
+
+        for line in in_fd:
             if out_path is None:
                 this_fd = out_fd
+                has_first_line = out_has_first_line
             else:
-                this_fd = train_fd if random.random() < proportion else dev_fd
-            # Write rest of lines indented with preceding comma-newline
-            this_fd.write(",\n")
+                this_fd, has_first_line = (train_fd, train_has_first_line) if random.random() < proportion else (dev_fd, dev_has_first_line)
+
+            if has_first_line:
+                # Write rest of lines indented with preceding comma-newline
+                this_fd.write(",\n")
             count += 1
             if count % 32 == 0:
                 if out_path is None:
