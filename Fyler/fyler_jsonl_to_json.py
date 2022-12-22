@@ -34,9 +34,11 @@ def main(in_file: Path, out_path: Optional[Path], random_seed: int, proportion: 
             train_fd.write(START)
             dev_fd.write(START)
 
-        out_has_first_line = False
-        train_has_first_line = False
-        dev_has_first_line = False
+        has_first_line = {
+            "out": False,
+            "train": False,
+            "dev": False
+        }
 
         count = 0
 
@@ -45,14 +47,17 @@ def main(in_file: Path, out_path: Optional[Path], random_seed: int, proportion: 
 
         for line in in_fd:
             if out_path is None:
-                this_fd = out_fd
-                has_first_line = out_has_first_line
+                this_fd, fd_type = out_fd, "out"
             else:
-                this_fd, has_first_line = (train_fd, train_has_first_line) if random.random() < proportion else (dev_fd, dev_has_first_line)
+                this_fd, fd_type = (train_fd, "train") if random.random() < proportion else (dev_fd, "dev")
 
-            if has_first_line:
+            if has_first_line[fd_type]:
                 # Write rest of lines indented with preceding comma-newline
                 this_fd.write(",\n")
+            else:
+                # Set has_first_line flag for next iteration
+                has_first_line[fd_type] = True
+
             count += 1
             if count % 32 == 0:
                 if out_path is None:
