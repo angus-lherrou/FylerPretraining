@@ -55,6 +55,7 @@ import fyler_bow, utils, metrics
 from bow import BagOfWords as DimaBOW
 
 from ehr2vec import Ehr2VecConnection, EHR2VEC_URL
+from cnlpt_rest import CnlptRestConnection, CNLPT_REST_URL
 
 
 # ignore sklearn warnings
@@ -256,6 +257,8 @@ def data_dense(
         model = DimaBOW(**config, save_config=False)
     elif model_class_lower == "ehr2vec":
         model = Ehr2VecConnection(EHR2VEC_URL)
+    elif model_class_lower == "cnlpt_rest":
+        model = CnlptRestConnection(CNLPT_REST_URL)
     elif model_class_lower == "saved":
         model = None
     else:
