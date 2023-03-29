@@ -12,7 +12,7 @@ import re
 import string
 import time
 from dataclasses import dataclass, field
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Union
 import json
 
 import click
@@ -130,7 +130,7 @@ def run_evaluation_dense(cfg: configparser.ConfigParser, device, model_class: st
         kwargs = {"solver": "adam", "activation": "relu"}
     else:
         raise ValueError(
-            f'Downstream model type "{model_class}" not one of "logistic", "svm", or "mlp"'
+            f'Downstream model type "{model_type}" not one of "logistic", "svm", or "mlp"'
         )
 
     if cfg.get("data", "classif_param") == "search":
@@ -377,7 +377,7 @@ def main(
 def train_model(
     gpu,
     model_class: str,
-    model_dir: pathlib.Path,
+    model_dir: Union[pathlib.Path, str],
     out_dir: Optional[pathlib.Path],
     cfg_path: pathlib.Path,
 ):
