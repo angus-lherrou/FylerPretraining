@@ -138,7 +138,7 @@ def grp():
     "out_dir", type=click.Path(exists=False, file_okay=False, path_type=Path)
 )
 @click.option(
-    "--url", "-u", type=str, help="URL of ehr2vec server", default=EHR2VEC_URL
+    "--url", "-u", type=str, help="URL of cnlpt REST server", default=CNLPT_REST_URL
 )
 @click.option(
     "--initial-timeout",
@@ -161,7 +161,7 @@ def save(
     initial_timeout: float,
     max_timeout: Optional[float],
 ):
-    """Save ehr2vec vectors for all text files in IN_DIR into OUT_DIR.
+    """Save cnlpt REST vectors for all text files in IN_DIR into OUT_DIR.
 
     Will continue until all vectors are saved. Press CTRL-C to exit.
     """
