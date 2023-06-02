@@ -10,7 +10,7 @@ import click
 import numpy as np
 import requests
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 CNLPT_REST_URL = "http://nlp-gpu:8181/hier/get_rep"
 
@@ -49,7 +49,7 @@ class CnlptRestConnection:
         return np.vstack([np.load(p) for p in directory.glob("*.npy")])
 
     def extract_many(self, texts: Sequence[str], timeout: float = 5) -> np.ndarray:
-        vecs = [self.extract(text, timeout=timeout) for text in tqdm(texts)]
+        vecs = [self.extract(text, timeout=timeout) for text in tqdm(texts, desc='Extracting vectors for text in dataset')]
         percent_str = 100 * sum(isinstance(vec, str) for vec in vecs) / len(vecs)
         percent_timeout = (
             100

@@ -80,7 +80,7 @@ def grid_search(
     param_grid: dict
 
     if issubclass(model_class, LogisticRegression):
-        clf = model_class(class_weight="balanced", max_iter=100)
+        clf = model_class(class_weight="balanced", random_state=718, max_iter=1000)
         if param_grid is None:
             param_grid = {"C": [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]}
     elif issubclass(model_class, SVC):
@@ -121,13 +121,13 @@ def run_evaluation_dense(cfg: configparser.ConfigParser, device, model_class: st
         model_type := cfg.get("model", "model_type", fallback="logistic").lower()
     ) == "logistic":
         downstream_class = LogisticRegression
-        kwargs = {"class_weight": "balanced"}
+        kwargs = {"class_weight": "balanced", "C":0.1}
     elif model_type == "svm":
         downstream_class = SVC
         kwargs = {"class_weight": "balanced"}
     elif model_type == "mlp":
         downstream_class = MLPClassifier
-        kwargs = {"solver": "adam", "activation": "relu"}
+        kwargs = {"solver": "adam", "activation": "relu", "batch_size":64, "learning_rate_init":0.01, "alpha":0.1, "hidden_layer_sizes": (200,), "max_iter":200, "verbose": True, "early_stopping":True, "validation_fraction":0.2, "random_state":720 }
     else:
         raise ValueError(
             f'Downstream model type "{model_type}" not one of "logistic", "svm", or "mlp"'
@@ -181,14 +181,15 @@ def run_evaluation_dense(cfg: configparser.ConfigParser, device, model_class: st
     probs = classifier.predict_proba(x_test)
     print("ON TEST:  ", end="")
 
-    if multiclass:
-        metrics.report_roc_auc(
-            label_binarize(y_test, classes=sorted(set(y_test))), probs
-        )
-    else:
-        metrics.report_roc_auc(y_test, probs[:, 1])
+    # if multiclass:
+    #     metrics.report_roc_auc(
+    #         label_binarize(y_test, classes=sorted(set(y_train))), probs
+    #     )
+    # else:
+    #     metrics.report_pr_auc(y_test, probs[:, 1])
 
-    print(classification_report(y_test, np.argmax(probs, axis=1), target_names=labels))
+    print(classification_report(y_test, np.argmax(probs, axis=1), target_names=labels, labels=list(range(len(labels)))))
+    
     # print(
     #     "\nON TEST:  ".join(
     #         [""]
@@ -241,17 +242,19 @@ def data_dense(
     train_data = cfg.get("data", "train")
     test_data = cfg.get("data", "test")
 
-    # load model configuration
-    pkl = open(cfg.get("data", "config_pickle"), "rb")
-    config = pickle.load(pkl)
-
     # instantiate model and load parameters
     if (model_class_lower := model_class.lower()) == "fyler":
+        # load model configuration
+        pkl = open(cfg.get("data", "config_pickle"), "rb")
+        config = pickle.load(pkl)
         config["model_dir"] = config.get(
             "model_dir", os.path.dirname(cfg.get("data", "model_file"))
         )
         model = fyler_bow.BagOfWords(**config, save_config=False)
     elif model_class_lower == "codes":
+        # load model configuration
+        pkl = open(cfg.get("data", "config_pickle"), "rb")
+        config = pickle.load(pkl)
         if "model_dir" in config:
             del config["model_dir"]
         model = DimaBOW(**config, save_config=False)
@@ -495,7 +498,7 @@ def fextract(cfg_path, experiment: str, model: str):
 @click.option(
     "--model_class",
     "-m",
-    type=click.Choice(["fyler", "codes", "ehr2vec", "saved"], case_sensitive=False),
+    type=click.Choice(["fyler", "codes", "ehr2vec", "saved", "cnlpt_rest"], case_sensitive=False),
     default="fyler",
 )
 def batch_(
@@ -512,7 +515,8 @@ def batch_(
     * ``fyler`` model_class is the default fyler code encoder.
     * ``codes`` is the ICD code encoder model.
     * ``ehr2vec`` uses an ehr2vec server as the encoder
-    * ``saved`` uses saved ehr2vec vectors; this currently only points to vectors
+    * ``cnlpt_rest`` uses a cnlpt rest server as the encoder
+    * ``saved`` uses saved ehr2vec or cnlpt_rest vectors; this currently only points to vectors
       in ``train_npy`` and ``test_npy`` folders in the same directory as the ``train``
       and ``test`` input folders.
 
@@ -524,7 +528,7 @@ def batch_(
     :param exclude: optional; file containing names of configs to exclude from the batch
                     (useful for resuming aborted runs)
     :param model_class: the type of model being loaded; defaults to "fyler", but can be any of
-                        "fyler", "codes", "ehr2vec", or "saved"
+                        "fyler", "codes", "ehr2vec", "cnlpt_rest", or "saved"
     """
     actual_gpus = torch.cuda.device_count()
     print(f"Have {actual_gpus} GPUs available")
