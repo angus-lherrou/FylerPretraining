@@ -181,14 +181,19 @@ def run_evaluation_dense(cfg: configparser.ConfigParser, device, model_class: st
     probs = classifier.predict_proba(x_test)
     print("ON TEST:  ", end="")
 
-    # if multiclass:
-    #     metrics.report_roc_auc(
-    #         label_binarize(y_test, classes=sorted(set(y_train))), probs
-    #     )
-    # else:
-    #     metrics.report_pr_auc(y_test, probs[:, 1])
+    if multiclass:
+        train_classes = set(y_train)
+        test_classes = set(y_test)
+        if train_classes - test_classes:
+            print(f"Some labels have zero support in the test set: {train_classes - test_classes}. Skipping ROC AUC score.")
+        else:
+            metrics.report_roc_auc(
+                label_binarize(y_test, classes=sorted(train_classes)), probs
+            )
+    else:
+        metrics.report_roc_auc(y_test, probs[:, 1])
 
-    print(classification_report(y_test, np.argmax(probs, axis=1), target_names=labels, labels=list(range(len(labels)))))
+    print(classification_report(y_test, np.argmax(probs, axis=1), target_names=labels, labels=list(range(max(train_classes) + 1))))
     
     # print(
     #     "\nON TEST:  ".join(
